@@ -1,0 +1,31 @@
+<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orzu — Admin</title><link rel="stylesheet" href="/style.css"></head><body>
+<div class="hero" style="padding:20px"><h1 class="gold" style="font-size:36px">ORZU</h1><p>ADMIN PANEL</p></div>
+<div class="tabs" id="tb"></div><div class="wrap" id="app"></div>
+<script>
+let P=localStorage.ap||'',D,tab=0,img='',edit=null;
+const f=n=>n.toLocaleString('ru')+" so'm",TABS=['Statistika','Menyu','Ofitsiantlar','Buyurtmalar'];
+const H=()=>({'Content-Type':'application/json','x-admin':P});
+async function api(u,m='GET',b){const r=await fetch(u,{method:m,headers:H(),body:b?JSON.stringify(b):undefined});if(r.status==401){localStorage.removeItem('ap');P='';login();throw 0}return r.json()}
+function login(){tb.innerHTML='';app.innerHTML=`<div class="stat" style="max-width:380px;margin:auto"><h2 class="gold">Kirish</h2><input id="pw" type="password" placeholder="Parol"><button class="btn" style="width:100%;margin-top:8px" onclick="P=pw.value;localStorage.ap=P;load()">Kirish</button></div>`}
+async function load(){if(!P)return login();D=await api('/api/admin/data');render()}
+function render(){tb.innerHTML=TABS.map((t,i)=>`<button class="tab ${i==tab?'on':''}" onclick="tab=${i};render()">${t}</button>`).join('');app.innerHTML=[stats,menu,waiters,orders][tab]()}
+const grp=(a,k)=>{const m={};a.forEach(o=>{const x=m[k(o)]||(m[k(o)]={n:0,s:0});x.n++;x.s+=o.total});return Object.entries(m).sort((a,b)=>b[1].s-a[1].s)};
+const tbl=(h,r)=>`<table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${r.map(x=>`<tr>${x.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
+function stats(){const O=D.orders,S=O.reduce((s,o)=>s+o.total,0),today=O.filter(o=>new Date(o.time).toDateString()==new Date().toDateString()).reduce((s,o)=>s+o.total,0);
+const pop={};O.forEach(o=>o.items.forEach(i=>pop[i.name]=(pop[i.name]||0)+i.qty));
+return `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"><div class="stat"><span>Umumiy savdo</span><b class="gold" style="font-size:20px">${f(S)}</b></div><div class="stat"><span>Bugungi savdo</span><b class="gold" style="font-size:20px">${f(today)}</b></div><div class="stat"><span>Buyurtmalar</span><b class="gold">${O.length}</b></div><div class="stat"><span>O‘rtacha chek</span><b class="gold" style="font-size:20px">${f(O.length?Math.round(S/O.length):0)}</b></div></div>
+<h2 class="gold sp">Ofitsiantlar savdosi</h2><div class="stat sp" style="overflow:auto">${tbl(['Ofitsiant','Buyurtma','Summa'],grp(O,o=>o.waiterName).map(([k,v])=>[k,v.n,f(v.s)]))}</div>
+<h2 class="gold sp">Stollar bo‘yicha</h2><div class="stat sp" style="overflow:auto">${tbl(['Stol','Buyurtma','Summa'],grp(O,o=>'Stol '+o.table).map(([k,v])=>[k,v.n,f(v.s)]))}</div>
+<h2 class="gold sp">Mashhur taomlar</h2><div class="stat sp">${tbl(['Taom','Soni'],Object.entries(pop).sort((a,b)=>b[1]-a[1]).slice(0,8))}</div>`}
+function menu(){return `<div class="stat"><h3 class="gold">${edit?'Taomni tahrirlash':"Taom qo'shish"}</h3><input id="mn" placeholder="Nomi" value="${edit?edit.name:''}"><input id="mp" type="number" placeholder="Narxi (so'm)" value="${edit?edit.price:''}"><select id="mc">${D.cats.map((c,i)=>`<option value="${i}" ${edit&&edit.cat==i?'selected':''}>${c}</option>`).join('')}</select><input type="file" accept="image/*" onchange="pick(this)"><div class="row sp"><button class="btn" onclick="saveM()">Saqlash</button>${edit?'<button class="btn red" onclick="edit=null;img=\'\';render()">Bekor</button>':''}</div></div>
+<div class="stat sp" style="overflow:auto">${tbl(['Rasm','Nomi','Narx','Bo‘lim',''],D.menu.map(m=>[`<img class="thumb" src="${m.img}">`,m.name,f(m.price),D.cats[m.cat],`<button class="btn sm" onclick="ed(${m.id})">✎</button> <button class="btn sm red" onclick="delM(${m.id})">✕</button>`]))}</div>`}
+function pick(el){const r=new FileReader();r.onload=e=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas'),k=Math.min(1,700/i.width);c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);img=c.toDataURL('image/jpeg',.8)};i.src=e.target.result};r.readAsDataURL(el.files[0])}
+async function saveM(){if(!mn.value||!mp.value)return alert('Nom va narxni kiriting');await api('/api/admin/menu','POST',{id:edit&&edit.id,name:mn.value,price:mp.value,cat:mc.value,img});edit=null;img='';load()}
+function ed(id){edit=D.menu.find(m=>m.id==id);render();scrollTo(0,0)}
+async function delM(id){if(confirm("O'chirilsinmi?")){await api('/api/admin/menu/'+id,'DELETE');load()}}
+function waiters(){return `<div class="stat"><h3 class="gold">Ofitsiant qo'shish</h3><input id="wn" placeholder="Ism"><input id="wp" placeholder="PIN kod (masalan 1234)"><button class="btn" onclick="addW()">Qo'shish</button></div><div class="stat sp">${tbl(['Ism','PIN',''],D.waiters.map(w=>[w.name,w.pin,`<button class="btn sm red" onclick="delW(${w.id})">✕</button>`]))}</div>`}
+async function addW(){if(!wn.value||!wp.value)return;await api('/api/admin/waiter','POST',{name:wn.value,pin:wp.value});load()}
+async function delW(id){if(confirm("O'chirilsinmi?")){await api('/api/admin/waiter/'+id,'DELETE');load()}}
+function orders(){return `<div class="stat" style="overflow:auto">${tbl(['#','Stol','Ofitsiant','Summa','Holat','Vaqt'],D.orders.slice(-60).reverse().map(o=>[o.id,o.table,o.waiterName,f(o.total),`<span class="badge ${o.status}">${o.status}</span>`,new Date(o.time).toLocaleString('ru')]))}</div>`}
+load();
+</script></body></html>

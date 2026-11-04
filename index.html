@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orzu — Menyu</title><link rel="stylesheet" href="/style.css"></head><body>
+<div class="hero"><h1 class="gold">ORZU</h1><div class="line"></div><p>RESTORAN · MENYU</p></div>
+<div class="tabs" id="tb"></div><div class="wrap"><div class="grid" id="g"></div></div>
+<div class="bar" id="bar"><div><small style="color:#b9a875">Jami</small><br><b class="gold" id="tot" style="font-size:20px"></b></div><button class="btn" onclick="op()">Buyurtma berish</button></div>
+<div class="modal" id="md" onclick="if(event.target==this)this.classList.remove('on')"><div class="sheet" id="sh"></div></div>
+<script>
+let T=new URLSearchParams(location.search).get('table')||'',M=[],C=[],cat=0,cart={};
+const f=n=>n.toLocaleString('ru')+" so'm";
+async function init(){const r=await(await fetch('/api/menu')).json();C=r.cats;M=r.menu;tabs();show()}
+function tabs(){tb.innerHTML=C.map((c,i)=>`<button class="tab ${i==cat?'on':''}" onclick="cat=${i};tabs();show()">${c}</button>`).join('')}
+function show(){g.innerHTML=M.filter(m=>m.cat==cat).map((m,i)=>`<div class="card" style="animation-delay:${i*.07}s"><div class="im"><img src="${m.img}" alt=""></div><div class="p"><h3>${m.name}</h3><div class="row"><b class="gold">${f(m.price)}</b><div class="q"><button onclick="ch(${m.id},-1)">−</button><span id="q${m.id}">${cart[m.id]||0}</span><button onclick="ch(${m.id},1)">+</button></div></div></div></div>`).join('')||'<p style="text-align:center;color:#b9a875">Bu bo‘limda hozircha taom yo‘q</p>'}
+function sum(){return M.reduce((s,m)=>s+(cart[m.id]||0)*m.price,0)}
+function ch(id,d){cart[id]=Math.max(0,(cart[id]||0)+d);const e=document.getElementById('q'+id);if(e)e.textContent=cart[id];const s=sum();tot.textContent=f(s);bar.classList.toggle('on',s>0)}
+function op(){const L=M.filter(m=>cart[m.id]);sh.innerHTML=`<h2 class="gold">Buyurtmangiz</h2><div class="sp">${L.map(m=>`<div class="row" style="padding:8px 0;border-bottom:1px solid #3a2f12"><span>${m.name} × ${cart[m.id]}</span><b>${f(m.price*cart[m.id])}</b></div>`).join('')}</div><div class="row sp"><b>Jami:</b><b class="gold">${f(sum())}</b></div><input id="tn" type="number" placeholder="Stol raqami" value="${T}"><button class="btn" style="width:100%;margin-top:10px" onclick="send()">Yuborish</button>`;md.classList.add('on')}
+async function send(){const t=tn.value;const r=await(await fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({table:t,items:Object.entries(cart).map(([id,qty])=>({id:+id,qty}))})})).json();
+if(r.error)return alert(r.error);cart={};T=t;sh.innerHTML=`<div class="ok"><i>✨</i><h2 class="gold">Rahmat!</h2><p style="margin-top:8px">Buyurtmangiz ofitsiantga yuborildi.<br>Tez orada xizmat ko‘rsatamiz.</p><button class="btn" style="margin-top:18px" onclick="md.classList.remove('on');ch(0,0);show()">Yopish</button></div>`;bar.classList.remove('on')}
+init();
+</script></body></html>

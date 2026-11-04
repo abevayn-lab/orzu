@@ -1,0 +1,19 @@
+<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orzu — Ofitsiant</title><link rel="stylesheet" href="/style.css"></head><body>
+<div class="hero" style="padding:20px"><h1 class="gold" style="font-size:34px">ORZU</h1><p>OFITSIANT PANELI</p></div>
+<div class="wrap" id="app"></div>
+<script>
+let W=JSON.parse(localStorage.w||'null'),O=[],last=-1;
+const f=n=>n.toLocaleString('ru')+" so'm";
+const ST={new:'Yangi',accepted:'Qabul qilindi',served:'Berildi',paid:'To‘landi'},NX={new:['accepted','Qabul qilish'],accepted:['served','Taom berildi'],served:['paid','To‘landi']};
+async function login(){const ws=await(await fetch('/api/waiters')).json();
+app.innerHTML=`<div class="stat" style="max-width:400px;margin:auto"><h2 class="gold">Kirish</h2><select id="ws">${ws.map(w=>`<option value="${w.id}">${w.name}</option>`).join('')}</select><input id="pin" type="password" placeholder="PIN kod"><button class="btn" style="width:100%;margin-top:8px" onclick="go()">Kirish</button></div>`}
+async function go(){W={id:ws.value,pin:pin.value};const r=await fetch(`/api/waiter/orders?id=${W.id}&pin=${W.pin}`);if(r.status!=200)return alert("PIN noto'g'ri");localStorage.w=JSON.stringify(W);load()}
+async function load(){if(!W)return login();const r=await fetch(`/api/waiter/orders?id=${W.id}&pin=${W.pin}`);if(r.status!=200){localStorage.removeItem('w');W=null;return login()}
+O=await r.json();const n=O.filter(o=>o.status=='new').length;if(last>=0&&n>last)beep();last=n;draw()}
+function beep(){try{const a=new AudioContext(),o=a.createOscillator();o.frequency.value=880;o.connect(a.destination);o.start();setTimeout(()=>o.stop(),300);navigator.vibrate&&navigator.vibrate(300)}catch(e){}}
+function draw(){const act=O.filter(o=>o.status!='paid'),today=O.filter(o=>new Date(o.time).toDateString()==new Date().toDateString()).reduce((s,o)=>s+o.total,0);
+app.innerHTML=`<div class="row" style="margin-bottom:14px"><div class="stat" style="flex:1"><span>Faol buyurtmalar</span><b class="gold">${act.length}</b></div><div class="stat" style="flex:1"><span>Bugungi savdo</span><b class="gold" style="font-size:18px">${f(today)}</b></div></div>`+
+(O.map((o,i)=>`<div class="card" style="margin-bottom:14px;animation-delay:${i*.04}s;opacity:${o.status=='paid'?.55:1}"><div class="p"><div class="row"><h3>Stol ${o.table}</h3><span class="badge ${o.status}">${ST[o.status]}</span></div><div style="margin:10px 0;font-size:14px;line-height:1.7">${o.items.map(i=>`${i.name} × ${i.qty}`).join('<br>')}</div><div class="row"><b class="gold">${f(o.total)}</b>${NX[o.status]?`<button class="btn sm" onclick="st(${o.id},'${NX[o.status][0]}')">${NX[o.status][1]}</button>`:''}</div></div></div>`).join('')||'<p style="text-align:center;color:#b9a875">Hozircha buyurtma yo‘q</p>')+`<p style="text-align:center;margin-top:20px"><button class="btn sm red" onclick="localStorage.removeItem('w');location.reload()">Chiqish</button></p>`}
+async function st(orderId,status){await fetch('/api/waiter/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...W,orderId,status})});load()}
+load();setInterval(()=>W&&load(),4000);
+</script></body></html>
