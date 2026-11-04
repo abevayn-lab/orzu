@@ -233,6 +233,72 @@ app.post('/api/waiter/status', (q, s, n) => {
   s.json({ ok: 1 });
 });
 
+// WAITER ADD ITEMS (to an existing order, or a new order for a table)
+app.post('/api/waiter/add', (q, s, n) => {
+  q.query = q.body;
+  n();
+}, wt, (q, s) => {
+  const items = [];
+
+  for (const i of q.body.items || []) {
+    const m = CFG.menu.find(m => m.id == i.id);
+    const qty = Math.min(99, Number(i.qty) | 0);
+
+    if (m && qty > 0) items.push({ name: m.name, price: m.price, qty });
+  }
+
+  if (!items.length) {
+    return s.status(400).json({ error: "Taom tanlanmagan" });
+  }
+
+  let o;
+
+  if (q.body.orderId) {
+    o = O.list.find(
+      o => o.id == q.body.orderId && o.waiter === q.w.id
+    );
+
+    if (!o || o.status === 'paid') {
+      return s.status(400).json({ error: 'Buyurtma topilmadi' });
+    }
+
+    for (const it of items) {
+      const ex = o.items.find(
+        x => x.name === it.name && x.price === it.price
+      );
+
+      if (ex) ex.qty = Math.min(99, ex.qty + it.qty);
+      else o.items.push(it);
+    }
+
+    if (o.status === 'served') o.status = 'accepted';
+  } else {
+    const table = String(q.body.table || '').trim();
+
+    if (!table) {
+      return s.status(400).json({ error: 'Stol raqami kerak' });
+    }
+
+    o = {
+      id: ++O.seq,
+      table,
+      waiter: q.w.id,
+      waiterName: q.w.name,
+      items,
+      total: 0,
+      status: 'accepted',
+      time: Date.now()
+    };
+
+    O.list.push(o);
+  }
+
+  o.total = o.items.reduce((a, i) => a + i.price * i.qty, 0);
+  save('orders');
+
+  s.json({ ok: true, id: o.id });
+});
+
 // ADMIN DATA
 app.get('/api/admin/data', adm, (q, s) => {
   s.json({
