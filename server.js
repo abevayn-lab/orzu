@@ -19,6 +19,7 @@ const CATS = [
 ];
 
 const P = __dirname;
+const PUB = path.join(__dirname, 'mnt', 'user-data', 'outputs', 'orzu', 'public');
 const LF = path.join(P, 'data.json');
 
 const HD = {
@@ -306,12 +307,12 @@ app.get('/', (q, s) => {
 
 // ADMIN PAGE
 app.get(['/admin', '/admin/'], (q, s) => {
-  s.sendFile(path.join(P, 'admin', 'index.html'));
+  s.sendFile(path.join(PUB, 'admin', 'index.html'));
 });
 
 // WAITER PAGE
 app.get(['/waiter', '/waiter/'], (q, s) => {
-  s.sendFile(path.join(P, 'waiter', 'index.html'));
+  s.sendFile(path.join(PUB, 'waiter', 'index.html'));
 });
 
 // STATIC FILES
