@@ -340,6 +340,13 @@ app.post('/api/admin/menu', adm, (q, s) => {
   s.json({ ok: 1 });
 });
 
+// ADMIN CLEAR ALL ORDERS (resets statistics)
+app.delete('/api/admin/orders', adm, (q, s) => {
+  O.list = [];
+  save('orders');
+  s.json({ ok: 1 });
+});
+
 // ADMIN DELETE MENU
 app.delete('/api/admin/menu/:id', adm, (q, s) => {
   CFG.menu = CFG.menu.filter(m => m.id != q.params.id);
