@@ -11,7 +11,7 @@ const PASS = process.env.ADMIN_PASS || 'admin123';
 const SU = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SK = process.env.SUPABASE_KEY;
 
-const CATS = [
+const DEFAULT_CATS = [
   '1-chi taom',
   '2-chi taom',
   'Salat va ichimliklar',
@@ -29,6 +29,7 @@ const HD = {
 };
 
 let CFG = {
+  cats: [...DEFAULT_CATS],
   menu: [],
   waiters: [
     { id: 1, name: 'Ofitsiant 1', pin: '1111' },
@@ -64,6 +65,11 @@ async function load() {
     CFG = d.CFG || CFG;
     O = d.O || O;
   }
+
+  // Eski bazadagi kategoriyalarni saqlab, yangi sozlamaga moslashtiramiz.
+  if (!Array.isArray(CFG.cats) || !CFG.cats.length) CFG.cats = [...DEFAULT_CATS];
+  if (!Array.isArray(CFG.menu)) CFG.menu = [];
+  if (!Array.isArray(CFG.waiters)) CFG.waiters = [];
 }
 
 // DATABASE SAVE
@@ -125,7 +131,7 @@ app.get('/health', (q, s) => {
 // CUSTOMER MENU
 app.get('/api/menu', (q, s) => {
   s.json({
-    cats: CATS,
+    cats: CFG.cats,
     menu: CFG.menu.filter(m => !m.hidden)
   });
 });
@@ -307,6 +313,19 @@ app.get('/api/admin/data', adm, (q, s) => {
     waiters: CFG.waiters,
     orders: O.list
   });
+});
+
+// ADMIN ADD CATEGORY
+app.post('/api/admin/category', adm, (q, s) => {
+  const name = String(q.body.name || '').trim();
+  if (!name) return s.status(400).json({ error: 'Bo‘lim nomini kiriting' });
+  if (name.length > 40) return s.status(400).json({ error: 'Bo‘lim nomi 40 belgidan oshmasin' });
+  if (CFG.cats.some(c => c.toLowerCase() === name.toLowerCase())) {
+    return s.status(400).json({ error: 'Bu bo‘lim allaqachon bor' });
+  }
+  CFG.cats.push(name);
+  save('cfg');
+  s.json({ ok: 1, cats: CFG.cats });
 });
 
 // ADMIN ADD / EDIT MENU
