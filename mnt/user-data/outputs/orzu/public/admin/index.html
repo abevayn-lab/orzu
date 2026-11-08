@@ -8,7 +8,7 @@ const H=()=>({'Content-Type':'application/json','x-admin':P});
 async function api(u,m='GET',b){const r=await fetch(u,{method:m,headers:H(),body:b?JSON.stringify(b):undefined});if(r.status==401){localStorage.removeItem('ap');P='';login();throw 0}return r.json()}
 function login(){tb.innerHTML='';app.innerHTML=`<div class="stat" style="max-width:380px;margin:auto"><h2 class="gold">Kirish</h2><input id="pw" type="password" placeholder="Parol"><button class="btn" style="width:100%;margin-top:8px" onclick="P=pw.value;localStorage.ap=P;load()">Kirish</button></div>`}
 async function load(){if(!P)return login();D=await api('/api/admin/data');render()}
-function render(){tb.innerHTML=TABS.map((t,i)=>`<button class="tab ${i==tab?'on':''}" onclick="tab=${i};render()">${t}</button>`).join('');app.innerHTML=[stats,menu,waiters,orders][tab]()}
+function render(){tb.innerHTML=TABS.map((t,i)=>`<button class="tab ${i==tab?'on':''}" onclick="tab=${i};render()">${t}</button>`).join('');app.innerHTML=[stats,menu,categories,waiters,orders][tab]()}
 const grp=(a,k)=>{const m={};a.forEach(o=>{const x=m[k(o)]||(m[k(o)]={n:0,s:0});x.n++;x.s+=o.total});return Object.entries(m).sort((a,b)=>b[1].s-a[1].s)};
 const tbl=(h,r)=>`<table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${r.map(x=>`<tr>${x.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
 function stats(){const O=D.orders,S=O.reduce((s,o)=>s+o.total,0),today=O.filter(o=>new Date(o.time).toDateString()==new Date().toDateString()).reduce((s,o)=>s+o.total,0);
