@@ -308,7 +308,7 @@ app.post('/api/waiter/add', (q, s, n) => {
 // ADMIN DATA
 app.get('/api/admin/data', adm, (q, s) => {
   s.json({
-    cats: CATS,
+    cats: CFG.cats,
     menu: CFG.menu,
     waiters: CFG.waiters,
     orders: O.list
