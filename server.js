@@ -328,6 +328,29 @@ app.post('/api/admin/category', adm, (q, s) => {
   s.json({ ok: 1, cats: CFG.cats });
 });
 
+// ADMIN DELETE CATEGORY
+app.delete('/api/admin/category/:index', adm, (q, s) => {
+  const index = Number(q.params.index);
+  if (!Number.isInteger(index) || index < 0 || index >= CFG.cats.length) {
+    return s.status(400).json({ error: 'Bo‘lim topilmadi' });
+  }
+  if (CFG.cats.length <= 1) {
+    return s.status(400).json({ error: 'Kamida bitta bo‘lim qolishi kerak' });
+  }
+
+  // Taomlari o‘chirilgan bo‘limdagi taomlarni boshqa bo‘limga ko‘chiramiz.
+  const fallback = CFG.cats.findIndex((_, i) => i !== index);
+  CFG.menu = CFG.menu.map(item => {
+    let cat = Number(item.cat);
+    if (cat === index) cat = fallback;
+    else if (cat > index) cat -= 1;
+    return { ...item, cat };
+  });
+  CFG.cats.splice(index, 1);
+  save('cfg');
+  s.json({ ok: 1, cats: CFG.cats });
+});
+
 // ADMIN ADD / EDIT MENU
 app.post('/api/admin/menu', adm, (q, s) => {
   const b = q.body;
