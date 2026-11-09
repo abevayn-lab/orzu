@@ -41,7 +41,8 @@ let CFG = {
 let O = {
   list: [],
   seq: 10,
-  nextWaiterIndex: 0
+  nextWaiterIndex: 0,
+  dayClosures: { waiters: {}, administrator: 0 }
 };
 
 // DATABASE LOAD
@@ -76,6 +77,9 @@ async function load() {
   if (!Number.isInteger(O.nextWaiterIndex) || O.nextWaiterIndex < 0) {
     O.nextWaiterIndex = 0;
   }
+  if (!O.dayClosures || typeof O.dayClosures !== 'object') O.dayClosures = { waiters: {}, administrator: 0 };
+  if (!O.dayClosures.waiters || typeof O.dayClosures.waiters !== 'object') O.dayClosures.waiters = {};
+  if (!Number.isFinite(Number(O.dayClosures.administrator))) O.dayClosures.administrator = 0;
 }
 
 // DATABASE SAVE
@@ -214,10 +218,17 @@ app.get('/api/waiters', (q, s) => {
 app.get('/api/waiter/orders', wt, (q, s) => {
   s.json(
     O.list
-      .filter(o => o.waiter === q.w.id)
+      .filter(o => o.waiter === q.w.id && Number(o.time || 0) >= Number(O.dayClosures.waiters[q.w.id] || 0))
       .slice(-80)
       .reverse()
   );
+});
+
+// WAITER CLOSE DAY: faqat shu ofitsiant ekranidagi buyurtmalarni yashiradi.
+app.post('/api/waiter/close-day', (q, s, n) => { q.query = q.body; n(); }, wt, (q, s) => {
+  O.dayClosures.waiters[q.w.id] = Date.now();
+  save('orders');
+  s.json({ ok: true, closedAt: O.dayClosures.waiters[q.w.id] });
 });
 
 // WAITER STATUS
@@ -315,7 +326,15 @@ app.get('/api/admin/data', adm, (q, s) => {
 
 // SEPARATE ADMINISTRATOR: ALL ORDERS FROM ALL WAITERS
 app.get('/api/administrator/data', administrator, (q, s) => {
-  s.json({ waiters: CFG.waiters.map(({ id, name }) => ({ id, name })), orders: O.list });
+  const closedAt = Number(O.dayClosures.administrator || 0);
+  s.json({ waiters: CFG.waiters.map(({ id, name }) => ({ id, name })), orders: O.list.filter(o => Number(o.time || 0) >= closedAt) });
+});
+
+// ADMINISTRATOR CLOSE DAY: faqat Administrator ekranidagi buyurtmalarni yashiradi.
+app.post('/api/administrator/close-day', administrator, (q, s) => {
+  O.dayClosures.administrator = Date.now();
+  save('orders');
+  s.json({ ok: true, closedAt: O.dayClosures.administrator });
 });
 
 // ADMIN ADD CATEGORY
