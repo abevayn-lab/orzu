@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Orzu — Menyu</title><link rel="stylesheet" href="/style.css"></head><body>
+<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#090807"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="ORZU"><title>ORZU — Restoran menyusi</title><link rel="stylesheet" href="/style.css"></head><body class="customer-app">
 <div class="hero"><h1 class="gold">ORZU</h1><div class="line"></div><p>RESTORAN · MENYU</p></div>
 <div class="tabs" id="tb"></div><div class="wrap"><div class="grid" id="g"></div></div>
 <div class="bar" id="bar"><div><small style="color:#b9a875">Jami</small><br><b class="gold" id="tot" style="font-size:20px"></b></div><button class="btn" onclick="op()">Buyurtma berish</button></div>
@@ -16,6 +16,8 @@ async function send(){const t=tn.value;const r=await(await fetch('/api/order',{m
 if(r.error)return alert(r.error);cart={};T=t;sh.innerHTML=`<div class="ok"><i>✨</i><h2 class="gold">Rahmat!</h2><p style="margin-top:8px">Buyurtmangiz ofitsiantga yuborildi.<br>Tez orada xizmat ko‘rsatamiz.</p><button class="btn" style="margin-top:18px" onclick="md.classList.remove('on');ch(0,0);show()">Yopish</button></div>`;bar.classList.remove('on')}
 init();
 </script><style>
+:root{color-scheme:dark}body.customer-app{min-height:100vh;padding-bottom:calc(95px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% -12%,#4a3014 0,#17100a 36%,#080706 78%);color:#fff;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}.hero{padding:28px 14px 18px;text-align:center}.hero h1{font-size:42px;letter-spacing:4px;text-shadow:0 2px 20px #c58b37}.hero p{letter-spacing:4px;color:#e9d5a7}.tabs{position:sticky;top:0;z-index:20;display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:#0b0907ed;backdrop-filter:blur(16px);border-bottom:1px solid #60451e;scrollbar-width:none}.tab{white-space:nowrap;border:1px solid #80602b;border-radius:22px;background:#21170e;color:#f8dfa2;padding:10px 15px;font-weight:700}.tab.on{background:linear-gradient(110deg,#ffe18d,#d58e20);color:#241606}.grid{gap:13px}.card{overflow:hidden;border:1px solid #755326;border-radius:20px;background:linear-gradient(145deg,#291b10,#100c09);box-shadow:0 8px 22px #0008}.card .im{height:165px;background:#1b130b}.card .im img{width:100%;height:100%;object-fit:cover}.card .p{padding:13px}.card h3{font-size:16px;margin:0 0 12px;color:#fff2d3}.q button{width:34px;height:34px;border:1px solid #987035;border-radius:10px;background:#30200f;color:#ffe39a;font-size:20px}.bar{position:fixed;z-index:40;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));padding:12px 14px;border:1px solid #8a642c;border-radius:19px;background:#17100eef;backdrop-filter:blur(18px);box-shadow:0 8px 30px #000b}.bar .btn{border:0;border-radius:13px;background:linear-gradient(110deg,#ffe18d,#d58e20);color:#241606;font-weight:900;padding:13px 16px}.modal{z-index:60;background:#050403eF;backdrop-filter:blur(8px)}.sheet{border:1px solid #8a642c;border-radius:24px 24px 0 0;background:linear-gradient(145deg,#291b10,#100c09);padding:22px 17px calc(20px + env(safe-area-inset-bottom))}.sheet input{width:100%;padding:14px;border:1px solid #8a642c;border-radius:12px;background:#090706;color:#fff}
+
 html{touch-action:manipulation;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 body{overscroll-behavior-y:contain}
 button,a,input,select,textarea{touch-action:manipulation}
@@ -49,11 +51,6 @@ button,a,input,select,textarea{touch-action:manipulation}
    ask();arm();
  });
  arm();
- document.addEventListener('touchend',function(e){
-   const now=Date.now();
-   if(window.__orzuLastTap&&now-window.__orzuLastTap<320)e.preventDefault();
-   window.__orzuLastTap=now;
- },{passive:false});
- document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+  document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
 })();
 </script></body></html>
