@@ -16,7 +16,7 @@ const grp=(a,k)=>{const m={};a.forEach(o=>{const x=m[k(o)]||(m[k(o)]={n:0,s:0});
 const tbl=(h,r)=>`<table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${r.map(x=>`<tr>${x.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
 function stats(){const O=D.orders,S=O.reduce((s,o)=>s+o.total,0),today=O.filter(o=>new Date(o.time).toDateString()==new Date().toDateString()).reduce((s,o)=>s+o.total,0);
 const pop={};O.forEach(o=>o.items.forEach(i=>pop[i.name]=(pop[i.name]||0)+i.qty));
-return `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"><div class="stat"><span>Umumiy savdo</span><b class="gold" style="font-size:20px">${f(S)}</b></div><div class="stat"><span>Bugungi savdo</span><b class="gold" style="font-size:20px">${f(today)}</b></div><div class="stat"><span>Buyurtmalar</span><b class="gold">${O.length}</b></div><div class="stat"><span>O‘rtacha chek</span><b class="gold" style="font-size:20px">${f(O.length?Math.round(S/O.length):0)}</b></div></div>
+return `<div class="profilebar"><div class="profilebadge">♛</div><div><b>ORZU Administrator</b><small>Restoran boshqaruvi</small><span>● Onlayn</span></div></div><div class="home-stats"><div class="home-stat"><span>Faol buyurtmalar</span><b>${O.filter(o=>o.status!=='paid').length}</b></div><div class="home-stat"><span>Jami tushum</span><b>${f(S)}</b></div><div class="home-stat"><span>Ofitsiantlar</span><b>${D.waiters.length}</b></div></div><button class="home-action" onclick="tab=4;render()">▣　Yangi buyurtmalar　${O.filter(o=>o.status==='new').length}　›</button><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"><div class="stat"><span>Umumiy savdo</span><b class="gold" style="font-size:20px">${f(S)}</b></div><div class="stat"><span>Bugungi savdo</span><b class="gold" style="font-size:20px">${f(today)}</b></div><div class="stat"><span>Buyurtmalar</span><b class="gold">${O.length}</b></div><div class="stat"><span>O‘rtacha chek</span><b class="gold" style="font-size:20px">${f(O.length?Math.round(S/O.length):0)}</b></div></div>
 <h2 class="gold sp">Ofitsiantlar savdosi</h2><div class="stat sp" style="overflow:auto">${tbl(['Ofitsiant','Buyurtma','Summa'],grp(O,o=>o.waiterName).map(([k,v])=>[k,v.n,f(v.s)]))}</div>
 <h2 class="gold sp">Stollar bo‘yicha</h2><div class="stat sp" style="overflow:auto">${tbl(['Stol','Buyurtma','Summa'],grp(O,o=>'Stol '+o.table).map(([k,v])=>[k,v.n,f(v.s)]))}</div>
 <h2 class="gold sp">Mashhur taomlar</h2><div class="stat sp">${tbl(['Taom','Soni'],Object.entries(pop).sort((a,b)=>b[1]-a[1]).slice(0,8))}</div>
@@ -72,4 +72,25 @@ button,a,input,select,textarea{touch-action:manipulation}
  arm();
   document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
 })();
-</script></body></html>
+</script><style id="orzu-reference-design">
+:root{--g:#f4c65e;--g2:#ffe39a}
+body{background:radial-gradient(ellipse at 50% -18%,#5a3718 0,#21150c 32%,#080706 76%) fixed!important;color:#fff!important;padding-bottom:100px!important;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif!important}
+.hero{padding:24px 12px 18px!important}
+.hero:before{content:"♛";display:block;color:#ffe39a;font-size:46px;line-height:1.1;text-shadow:0 0 20px #d99b36}
+.hero h1{font-size:clamp(43px,12vw,54px)!important;color:#ffda83!important;text-shadow:0 2px 20px #c17c21;letter-spacing:3px!important}
+.hero p{letter-spacing:5px!important;color:#fff0c9!important}
+.tabs{display:none!important}
+.wrap{max-width:650px!important;padding:12px 13px 25px!important}
+.stat,.card{background:linear-gradient(125deg,#2b1c10,#17100b 60%,#100c09)!important;border:1px solid #956b31!important;box-shadow:0 8px 25px #0009,inset 0 1px #ffffff0a!important;border-radius:20px!important}
+.profilebar{display:flex;align-items:center;gap:13px;padding:14px;margin:0 0 14px;border-radius:22px;border:1px solid #956b31;background:linear-gradient(125deg,#2b1c10,#100c09);box-shadow:0 8px 25px #0009}
+.profilebadge{width:64px;height:64px;border:2px solid #d8a84b;border-radius:50%;display:grid;place-items:center;font-size:34px;color:#ffe39a;background:#25190e}
+.profilebar b,.profilebar small,.profilebar span{display:block}.profilebar b{font-size:16px}.profilebar small{color:#c0b5a3;margin:4px 0}.profilebar span{color:#54e56c;font-size:12px}
+.home-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0}
+.home-stat{min-width:0;padding:14px 7px;text-align:center;border:1px solid #956b31;border-radius:19px;background:linear-gradient(125deg,#2b1c10,#100c09);box-shadow:0 6px 18px #0008}
+.home-stat span{display:block;color:#eee;font-size:12px;min-height:30px}.home-stat b{display:block;color:#ffe39a;font:700 clamp(18px,5vw,24px) Georgia,serif;overflow-wrap:anywhere;margin-top:5px}
+.home-action{width:100%;border:0;border-radius:30px;padding:17px 12px;margin:5px 0 18px;background:linear-gradient(110deg,#ffe58d,#f6bd42 55%,#bd7a17);color:#241606;font-weight:900;font-size:17px;box-shadow:0 5px 22px #bd7c1d55}
+.btn{border-radius:30px!important}
+.bar{transform:none!important;bottom:0!important;background:#100c09f5!important;border-top:1px solid #956b31!important;padding:10px!important}
+@media(max-width:480px){.home-stats{gap:7px}.home-stat{padding:12px 5px}.home-stat span{font-size:11px}}
+</style>
+</body></html>
