@@ -164,6 +164,7 @@ app.post('/api/order', (q, s) => {
       items.push({
         name: m.name,
         price: m.price,
+        img: m.img || '',
         qty: Math.min(99, Number(i.qty) | 0)
       });
     }
@@ -247,7 +248,7 @@ app.post('/api/waiter/add', (q, s, n) => {
     const m = CFG.menu.find(m => m.id == i.id);
     const qty = Math.min(99, Number(i.qty) | 0);
 
-    if (m && qty > 0) items.push({ name: m.name, price: m.price, qty });
+    if (m && qty > 0) items.push({ name: m.name, price: m.price, img: m.img || '', qty });
   }
 
   if (!items.length) {
