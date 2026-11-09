@@ -39,7 +39,8 @@ let CFG = {
 
 let O = {
   list: [],
-  seq: 10
+  seq: 10,
+  nextWaiterIndex: 0
 };
 
 // DATABASE LOAD
@@ -70,6 +71,10 @@ async function load() {
   if (!Array.isArray(CFG.cats) || !CFG.cats.length) CFG.cats = [...DEFAULT_CATS];
   if (!Array.isArray(CFG.menu)) CFG.menu = [];
   if (!Array.isArray(CFG.waiters)) CFG.waiters = [];
+  // Navbat indeksi eski bazalarda bo'lmasa, birinchi ofitsiantdan boshlaymiz.
+  if (!Number.isInteger(O.nextWaiterIndex) || O.nextWaiterIndex < 0) {
+    O.nextWaiterIndex = 0;
+  }
 }
 
 // DATABASE SAVE
@@ -165,30 +170,12 @@ app.post('/api/order', (q, s) => {
     return s.status(400).json({ error: "Ofitsiant yo'q" });
   }
 
-  const act = O.list.filter(o => o.status !== 'paid');
-
-  let wid = (
-    act.find(o =>
-      o.table === table &&
-      CFG.waiters.some(w => w.id === o.waiter)
-    ) || {}
-  ).waiter;
-
-  if (!wid) {
-    const cnt = CFG.waiters.map(w => ({
-      id: w.id,
-      n: new Set(
-        act.filter(o => o.waiter === w.id).map(o => o.table)
-      ).size
-    }));
-
-    const min = Math.min(...cnt.map(c => c.n));
-    const pool = cnt.filter(c => c.n === min);
-
-    wid = pool[Math.floor(Math.random() * pool.length)].id;
-  }
-
-  const w = CFG.waiters.find(w => w.id === wid);
+  // Har bir yangi mijoz zakazi ofitsiantlarga qat'iy navbat bilan taqsimlanadi.
+  // Stol bandligi yoki oldingi zakazlar navbatni o'zgartirmaydi.
+  const waiterIndex = O.nextWaiterIndex % CFG.waiters.length;
+  const w = CFG.waiters[waiterIndex];
+  const wid = w.id;
+  O.nextWaiterIndex = (waiterIndex + 1) % CFG.waiters.length;
 
   const o = {
     id: ++O.seq,
