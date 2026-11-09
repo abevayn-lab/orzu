@@ -5,6 +5,9 @@ const net = require('net');
 const HOST = '127.0.0.1';
 const PORT = 17891;
 const ALLOWED_ORIGIN = 'https://hospitable-appreciation-production-6442.up.railway.app';
+const API_BASE = ALLOWED_ORIGIN;
+const PRINT_KEY = 'ORZU-LOCAL-PRINT-KEY-9f42c7b1-2026-11';
+let polling = false;
 const esc = s => String(s ?? '').normalize('NFKD')
   .replace(/[‘’ʻʼ`]/g, "'").replace(/[“”]/g, '"')
   .replace(/o'/gi, m => m[0] === 'O' ? 'O' : 'o')
@@ -71,6 +74,28 @@ function send(ip, bytes) {
     socket.on('timeout',()=>socket.destroy(new Error('Printer ulanish vaqti tugadi')));
   });
 }
+
+async function pollPrintJobs(){
+  if(polling)return;
+  polling=true;
+  try{
+    const r=await fetch(API_BASE+'/api/printer/jobs',{headers:{'x-orzu-print-key':PRINT_KEY}});
+    if(!r.ok)throw new Error('Print queue HTTP '+r.status);
+    const data=await r.json();
+    if(data.job){
+      await send(data.job.printerIp || '192.168.1.51',makeReceipt(data.job.order));
+      const ack=await fetch(API_BASE+'/api/printer/jobs/ack',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-orzu-print-key':PRINT_KEY},
+        body:JSON.stringify({id:data.job.id})
+      });
+      if(!ack.ok)throw new Error('Print acknowledgement failed');
+      console.log('ORZU chek chiqarildi:',data.job.order.id);
+    }
+  }catch(e){console.error('ORZU print queue:',e.message)}
+  finally{polling=false}
+}
+
 const server=http.createServer((req,res)=>{
   const origin=req.headers.origin||'';
   if (origin===ALLOWED_ORIGIN) {
@@ -96,4 +121,4 @@ const server=http.createServer((req,res)=>{
     }catch(e){res.writeHead(500,{'Content-Type':'application/json'});res.end(JSON.stringify({error:e.message||'Printer xatosi'}));}
   });
 });
-server.listen(PORT,HOST,()=>console.log('ORZU printer bridge ishlayapti: http://127.0.0.1:'+PORT));
+server.listen(PORT,HOST,()=>{console.log('ORZU printer bridge ishlayapti: http://127.0.0.1:'+PORT);pollPrintJobs();setInterval(pollPrintJobs,2500);});
