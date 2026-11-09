@@ -52,6 +52,7 @@ async function openAdd(id){
   const modal=document.createElement('div');modal.id='pk';modal.className='modal';
   modal.innerHTML='<div class="modalbox"><h2 id="orzu-modal-title" style="color:#ffe39a">'+(TGT?'Buyurtmaga taom qo‘shish':'Yangi buyurtma')+'</h2>'+(TGT?'':'<label for="orzu-table-input" style="display:block;color:#ffe39a;margin:12px 0 4px">Stol raqami</label><input class="input" id="orzu-table-input" type="number" inputmode="numeric" min="1" placeholder="Masalan: 8" required>')+'<div id="pl"><p class="muted">Menyu yuklanmoqda...</p></div><div class="actions" style="margin-top:15px"><button type="button" class="dark" onclick="closeAdd()">Bekor</button><button type="button" onclick="sendAdd()">Buyurtmani saqlash</button></div></div>';
   document.body.appendChild(modal);
+  try{history.pushState({orzuModal:true},'',location.href)}catch(e){}
   try{
     unlockSound();
     const response=await fetch('/api/menu?ts='+Date.now(),{method:'GET',cache:'no-store',headers:{'Accept':'application/json'}});
@@ -72,7 +73,7 @@ async function openAdd(id){
     console.error('ORZU menu load failed:',error);
   }
 }
-function closeAdd(){const modal=document.getElementById('pk');if(modal)modal.remove()}
+function closeAdd(fromPop){const modal=document.getElementById('pk');if(modal){modal.remove();if(fromPop!==true){try{if(history.state&&history.state.orzuModal){window.__skipPop=true;history.back()}}catch(e){}}}}
 function pdraw(){
   const panel=document.getElementById('pl');if(!panel)return;
   if(!MENU.length){panel.innerHTML='<p class="muted">Menyuda hozircha taom yo‘q</p>';return}
@@ -120,13 +121,14 @@ button,a,input,select,textarea{touch-action:manipulation}
    try{history.go(-2)}catch(e){}
    setTimeout(()=>{
      if(location.pathname===from){
-       if(from!=='/') location.assign('/');
-       else {allowExit=false;arm();alert('Ilovadan chiqish uchun brauzer oynasini yoping.')}
+       allowExit=false;arm();alert('Ilovadan chiqish uchun brauzer oynasini yoping.')
      }
    },450);
  });
  window.addEventListener('popstate',()=>{
+   if(window.__skipPop){window.__skipPop=false;return}
    if(allowExit)return;
+   if(document.getElementById('pk')){closeAdd(true);return}
    ask();arm();
  });
  arm();
