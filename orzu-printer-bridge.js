@@ -8,6 +8,7 @@ const ALLOWED_ORIGIN = 'https://hospitable-appreciation-production-6442.up.railw
 const API_BASE = ALLOWED_ORIGIN;
 const PRINT_KEY = 'ORZU-LOCAL-PRINT-KEY-9f42c7b1-2026-11';
 let polling = false;
+let lastIdleLog = 0;
 const esc = s => String(s ?? '').normalize('NFKD')
   .replace(/[‘’ʻʼ`]/g, "'").replace(/[“”]/g, '"')
   .replace(/o'/gi, m => m[0] === 'O' ? 'O' : 'o')
@@ -83,16 +84,22 @@ async function pollPrintJobs(){
     if(!r.ok)throw new Error('Print queue HTTP '+r.status);
     const data=await r.json();
     if(data.job){
-      await send(data.job.printerIp || '192.168.1.51',makeReceipt(data.job.order));
+      const job = data.job;
+      if (!job.order || !Array.isArray(job.order.items) || !job.order.items.length) throw new Error('Navbatdagi buyurtma ma’lumoti bo‘sh yoki noto‘g‘ri');
+      console.log('ORZU buyurtma topildi:', job.order.id, '| Stol:', job.order.table, '| Taomlar:', job.order.items.length);
+      await send(job.printerIp || '192.168.1.51',makeReceipt(job.order));
       const ack=await fetch(API_BASE+'/api/printer/jobs/ack',{
         method:'POST',
         headers:{'Content-Type':'application/json','x-orzu-print-key':PRINT_KEY},
         body:JSON.stringify({id:data.job.id})
       });
       if(!ack.ok)throw new Error('Print acknowledgement failed');
-      console.log('ORZU chek chiqarildi:',data.job.order.id);
+      console.log('ORZU chek chiqarildi:',job.order.id);
+    } else if (Date.now() - lastIdleLog > 30000) {
+      console.log('ORZU: server bilan aloqa bor, chop etish navbati bo‘sh.');
+      lastIdleLog = Date.now();
     }
-  }catch(e){console.error('ORZU print queue:',e.message)}
+  }catch(e){console.error('ORZU print queue XATOSI:',e.message)}
   finally{polling=false}
 }
 
