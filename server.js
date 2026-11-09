@@ -218,7 +218,6 @@ app.post('/api/order', (q, s) => {
   // Yangi mijoz zakazlari faqat ONLAYN ofitsiantlarga navbat bilan beriladi.
   const activeWaiters = CFG.waiters.filter(w => w && w.id != null && String(w.name || '').trim() && O.waiterShifts?.[w.id]?.online === true);
   if (!activeWaiters.length) return s.status(503).json({ error: 'Hozir onlayn ofitsiant yo‘q. Iltimos, birozdan keyin urinib ko‘ring.' });
-  if (!activeWaiters.length) return s.status(400).json({ error: "Faol ofitsiant yo'q" });
   const waiterIndex = O.nextWaiterIndex % activeWaiters.length;
   const w = activeWaiters[waiterIndex];
   const wid = w.id;
@@ -418,6 +417,28 @@ app.get('/api/cashier/data', cashier, (q, s) => {
     waiters: CFG.waiters.map(({ id, name }) => ({ id, name })),
     settings: O.cashierSettings || { printerIp: '192.168.1.51' }
   });
+});
+
+app.post('/api/cashier/waiter-presence', cashier, (q, s) => {
+  const waiter = CFG.waiters.find(w => String(w.id) === String(q.body.waiterId));
+  if (!waiter) return s.status(404).json({ error: 'Ofitsiant topilmadi' });
+  if (typeof q.body.online !== 'boolean') return s.status(400).json({ error: 'Onlayn yoki oflayn holatini tanlang' });
+  const now = Date.now();
+  const shift = O.waiterShifts[waiter.id] || (O.waiterShifts[waiter.id] = { online: false, onlineAt: 0, offlineAt: 0, sessions: [] });
+  if (q.body.online && !shift.online) {
+    shift.online = true;
+    shift.onlineAt = now;
+    shift.offlineAt = 0;
+    shift.sessions.push({ start: now, end: 0 });
+    if (shift.sessions.length > 100) shift.sessions = shift.sessions.slice(-100);
+  } else if (!q.body.online && shift.online) {
+    shift.online = false;
+    shift.offlineAt = now;
+    const openSession = [...(shift.sessions || [])].reverse().find(x => !x.end);
+    if (openSession) openSession.end = now;
+  }
+  save('orders');
+  s.json({ ok: true, waiterId: waiter.id, name: waiter.name, online: !!shift.online, onlineAt: Number(shift.onlineAt || 0), offlineAt: Number(shift.offlineAt || 0) });
 });
 
 app.post('/api/cashier/settings', cashier, (q, s) => {
