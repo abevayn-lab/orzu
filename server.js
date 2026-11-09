@@ -44,7 +44,7 @@ let O = {
   list: [],
   seq: 10,
   nextWaiterIndex: 0,
-  dayClosures: { waiters: {}, administrator: 0 },
+  dayClosures: { waiters: {}, administrator: 0, admin: 0 },
   cashierSettings: { printerIp: '192.168.1.51' }
 };
 
@@ -80,8 +80,9 @@ async function load() {
   if (!Number.isInteger(O.nextWaiterIndex) || O.nextWaiterIndex < 0) {
     O.nextWaiterIndex = 0;
   }
-  if (!O.dayClosures || typeof O.dayClosures !== 'object') O.dayClosures = { waiters: {}, administrator: 0 };
+  if (!O.dayClosures || typeof O.dayClosures !== 'object') O.dayClosures = { waiters: {}, administrator: 0, admin: 0 };
   if (!O.dayClosures.waiters || typeof O.dayClosures.waiters !== 'object') O.dayClosures.waiters = {};
+  if (!Number.isFinite(Number(O.dayClosures.admin))) O.dayClosures.admin = 0;
   if (!Number.isFinite(Number(O.dayClosures.administrator))) O.dayClosures.administrator = 0;
   if (!O.cashierSettings || typeof O.cashierSettings !== 'object') O.cashierSettings = { printerIp: '192.168.1.51' };
   if (typeof O.cashierSettings.printerIp !== 'string') O.cashierSettings.printerIp = '192.168.1.51';
@@ -395,12 +396,21 @@ app.get(['/cashier', '/cashier/'], (q, s) => {
 
 // ADMIN DATA
 app.get('/api/admin/data', adm, (q, s) => {
+  const closedAt = Number(O.dayClosures.admin || 0);
   s.json({
     cats: CFG.cats,
     menu: CFG.menu,
     waiters: CFG.waiters,
-    orders: O.list
+    orders: O.list.filter(o => Number(o.time || 0) >= closedAt),
+    history: O.list
   });
+});
+
+// ADMIN CLOSE DAY: faqat Admin panelidagi joriy ro‘yxatni yashiradi, tarixni saqlaydi.
+app.post('/api/admin/close-day', adm, (q, s) => {
+  O.dayClosures.admin = Date.now();
+  save('orders');
+  s.json({ ok: true, closedAt: O.dayClosures.admin });
 });
 
 // SEPARATE ADMINISTRATOR: ALL ORDERS FROM ALL WAITERS
@@ -483,11 +493,9 @@ app.post('/api/admin/menu', adm, (q, s) => {
   s.json({ ok: 1 });
 });
 
-// ADMIN CLEAR ALL ORDERS (resets statistics)
+// Keep order history immutable through the Admin API.
 app.delete('/api/admin/orders', adm, (q, s) => {
-  O.list = [];
-  save('orders');
-  s.json({ ok: 1 });
+  s.status(410).json({ error: 'Buyurtmalar tarixi o‘chirilmaydi. Kunlik ishni yopish funksiyasidan foydalaning.' });
 });
 
 // ADMIN DELETE MENU
