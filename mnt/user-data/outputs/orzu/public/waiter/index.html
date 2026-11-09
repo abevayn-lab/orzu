@@ -53,7 +53,7 @@ async function openAdd(id){
 function closeAdd(){const modal=document.getElementById('pk');if(modal)modal.remove()}
 function pdraw(){
   const panel=document.getElementById('pl');if(!panel)return;
-  panel.innerHTML=MENU.length?MENU.map(m=>'<div class="menuitem">'+(m.img?'<img class="foodpic" src="'+esc(m.img)+'" onerror="this.style.display=\\'none\\'">':'<span class="foodfallback">🍽️</span>')+'<span>'+esc(m.name)+'<br><small class="muted">'+f(m.price)+'</small></span><span class="qty"><button onclick="pq('+Number(m.id)+',-1)">−</button> <b>'+Number(SEL[m.id]||0)+'</b> <button onclick="pq('+Number(m.id)+',1)">+</button></span></div>').join(''):'<p>Menyu bo‘sh</p>';
+  panel.innerHTML=MENU.length?MENU.map(m=>'<div class="menuitem">'+(m.img?'<img class="foodpic" src="'+esc(m.img)+'">':'<span class="foodfallback">🍽️</span>')+'<span>'+esc(m.name)+'<br><small class="muted">'+f(m.price)+'</small></span><span class="qty"><button onclick="pq('+Number(m.id)+',-1)">−</button> <b>'+Number(SEL[m.id]||0)+'</b> <button onclick="pq('+Number(m.id)+',1)">+</button></span></div>').join(''):'<p>Menyu bo‘sh</p>';
 }
 function pq(id,d){SEL[id]=Math.max(0,Math.min(99,(SEL[id]||0)+d));pdraw()}
 async function sendAdd(){
