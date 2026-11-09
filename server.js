@@ -596,6 +596,33 @@ app.delete('/api/admin/menu/:id', adm, (q, s) => {
 });
 
 // ADMIN ADD WAITER
+app.post('/api/admin/waiter-presence', adm, async (q, s) => {
+  const waiter = CFG.waiters.find(w => String(w.id) === String(q.body.waiterId));
+  if (!waiter) return s.status(404).json({ error: 'Ofitsiant topilmadi' });
+  if (typeof q.body.online !== 'boolean') return s.status(400).json({ error: 'Onlayn yoki oflayn holatini tanlang' });
+  const now = Date.now();
+  const shift = O.waiterShifts[waiter.id] || (O.waiterShifts[waiter.id] = { online: false, onlineAt: 0, offlineAt: 0, sessions: [] });
+  if (q.body.online && !shift.online) {
+    shift.online = true;
+    shift.onlineAt = now;
+    shift.offlineAt = 0;
+    shift.sessions.push({ start: now, end: 0 });
+    if (shift.sessions.length > 100) shift.sessions = shift.sessions.slice(-100);
+  } else if (!q.body.online && shift.online) {
+    shift.online = false;
+    shift.offlineAt = now;
+    const openSession = [...(shift.sessions || [])].reverse().find(x => !x.end);
+    if (openSession) openSession.end = now;
+  }
+  try {
+    await save('orders');
+  } catch (e) {
+    console.error('Admin orqali ofitsiant smenasini saqlashda xato:', e);
+    return s.status(500).json({ error: 'Ofitsiant holati bazaga saqlanmadi. Qayta urinib ko‘ring.' });
+  }
+  s.json({ ok: true, waiterId: waiter.id, name: waiter.name, online: !!shift.online, onlineAt: Number(shift.onlineAt || 0), offlineAt: Number(shift.offlineAt || 0) });
+});
+
 app.post('/api/admin/waiter', adm, (q, s) => {
   const id = Date.now();
   CFG.waiters.push({ id, name: q.body.name, pin: String(q.body.pin) });
