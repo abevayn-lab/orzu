@@ -81,6 +81,7 @@ async function load() {
     O.nextWaiterIndex = 0;
   }
   if (!O.dayClosures || typeof O.dayClosures !== 'object') O.dayClosures = { waiters: {}, administrator: 0, admin: 0 };
+  if (!Number.isFinite(Number(O.statsResetAt))) O.statsResetAt = 0;
   if (!O.dayClosures.waiters || typeof O.dayClosures.waiters !== 'object') O.dayClosures.waiters = {};
   if (!Number.isFinite(Number(O.dayClosures.admin))) O.dayClosures.admin = 0;
   if (!Number.isFinite(Number(O.dayClosures.administrator))) O.dayClosures.administrator = 0;
@@ -402,7 +403,8 @@ app.get('/api/admin/data', adm, (q, s) => {
     menu: CFG.menu,
     waiters: CFG.waiters,
     orders: O.list.filter(o => Number(o.time || 0) >= closedAt),
-    history: O.list
+    history: O.list,
+    statsResetAt: Number(O.statsResetAt || 0)
   });
 });
 
@@ -491,6 +493,12 @@ app.post('/api/admin/menu', adm, (q, s) => {
 
   save('cfg');
   s.json({ ok: 1 });
+});
+
+app.post('/api/admin/reset-stats', adm, (q, s) => {
+  O.statsResetAt = Date.now();
+  save('orders');
+  s.json({ ok: true, statsResetAt: O.statsResetAt, historyPreserved: true });
 });
 
 // Keep order history immutable through the Admin API.
