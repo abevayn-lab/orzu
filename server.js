@@ -8,6 +8,7 @@ const app = express();
 app.use(express.json({ limit: '12mb' }));
 
 const PASS = process.env.ADMIN_PASS || 'admin123';
+const ADMINISTRATOR_PASS = process.env.ADMINISTRATOR_PASS || '';
 const SU = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SK = process.env.SUPABASE_KEY;
 
@@ -109,6 +110,12 @@ function save(k) {
 function adm(q, s, n) {
   if (q.headers['x-admin'] === PASS) return n();
   return s.status(401).json({ error: 'auth' });
+}
+
+// SEPARATE ADMINISTRATOR AUTH
+function administrator(q, s, n) {
+  if (ADMINISTRATOR_PASS && q.headers['x-administrator'] === ADMINISTRATOR_PASS) return n();
+  return s.status(401).json({ error: ADMINISTRATOR_PASS ? 'auth' : 'Administrator paroli Railway Variables’da sozlanmagan' });
 }
 
 // WAITER AUTH
@@ -302,6 +309,11 @@ app.get('/api/admin/data', adm, (q, s) => {
   });
 });
 
+// SEPARATE ADMINISTRATOR: ALL ORDERS FROM ALL WAITERS
+app.get('/api/administrator/data', administrator, (q, s) => {
+  s.json({ waiters: CFG.waiters.map(({ id, name }) => ({ id, name })), orders: O.list });
+});
+
 // ADMIN ADD CATEGORY
 app.post('/api/admin/category', adm, (q, s) => {
   const name = String(q.body.name || '').trim();
@@ -405,6 +417,11 @@ app.delete('/api/admin/waiter/:id', adm, (q, s) => {
 // CUSTOMER PAGE
 app.get('/', (q, s) => {
   s.sendFile(path.join(P, 'index.html'));
+});
+
+// SEPARATE ADMINISTRATOR PAGE
+app.get(['/administrator', '/administrator/'], (q, s) => {
+  s.sendFile(path.join(PUB, 'administrator', 'index.html'));
 });
 
 // ADMIN PAGE
