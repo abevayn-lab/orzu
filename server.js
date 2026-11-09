@@ -347,7 +347,11 @@ app.post('/api/waiter/print', (q, s, n) => { q.query = q.body; n(); }, wt, (q, s
 // LOCAL BRIDGE: fetch one queued print job
 app.get('/api/printer/jobs', (q, s) => {
   if (q.headers['x-orzu-print-key'] !== PRINT_KEY) return s.status(401).json({ error: 'auth' });
-  s.json({ job: (O.printJobs || [])[0] || null });
+  // Drop jobs stuck for more than 10 minutes so one failed print can't block the queue.
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  const fresh = (O.printJobs || []).filter(j => Number(String(j.id).split('-')[0]) >= cutoff);
+  if (fresh.length !== (O.printJobs || []).length) { O.printJobs = fresh; save('orders'); }
+  s.json({ job: fresh[0] || null });
 });
 
 // LOCAL BRIDGE: acknowledge a successfully printed job
