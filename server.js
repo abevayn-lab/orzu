@@ -45,6 +45,7 @@ let O = {
   seq: 10,
   nextWaiterIndex: 0,
   dayClosures: { waiters: {}, cashier: 0, administrator: 0, admin: 0 },
+  waiterShifts: {},
   cashierSettings: { printerIp: '192.168.1.51' }
 };
 
@@ -84,6 +85,23 @@ async function load() {
   if (!Number.isFinite(Number(O.statsResetAt))) O.statsResetAt = 0;
   if (!O.dayClosures.waiters || typeof O.dayClosures.waiters !== 'object') O.dayClosures.waiters = {};
   if (!Number.isFinite(Number(O.dayClosures.admin))) O.dayClosures.admin = 0;
+  if (!Number.isFinite(Number(O.dayClosures.cashier))) O.dayClosures.cashier = 0;
+  if (!O.waiterShifts || typeof O.waiterShifts !== 'object') O.waiterShifts = {};
+  // Server qayta ishga tushganda ochiq smenalarni avtomatik yopamiz.
+  let recoveredShift = false;
+  const restartAt = Date.now();
+  for (const w of CFG.waiters) {
+    const shift = O.waiterShifts[w.id] || (O.waiterShifts[w.id] = { online: false, onlineAt: 0, offlineAt: 0, sessions: [] });
+    if (!Array.isArray(shift.sessions)) shift.sessions = [];
+    if (shift.online) {
+      shift.online = false;
+      shift.offlineAt = restartAt;
+      const openSession = [...shift.sessions].reverse().find(x => !x.end);
+      if (openSession) openSession.end = restartAt;
+      recoveredShift = true;
+    }
+  }
+  if (recoveredShift) save('orders');
   if (!Number.isFinite(Number(O.dayClosures.cashier))) O.dayClosures.cashier = 0;
   if (!Number.isFinite(Number(O.dayClosures.administrator))) O.dayClosures.administrator = 0;
   if (!O.cashierSettings || typeof O.cashierSettings !== 'object') O.cashierSettings = { printerIp: '192.168.1.51' };
@@ -197,10 +215,9 @@ app.post('/api/order', (q, s) => {
     return s.status(400).json({ error: "Ofitsiant yo'q" });
   }
 
-  // Har bir yangi mijoz zakazi ofitsiantlarga qat'iy navbat bilan taqsimlanadi.
-  // Stol bandligi yoki oldingi zakazlar navbatni o'zgartirmaydi.
-  // Faqat hozir faol ro‘yxatda turgan ofitsiantlarga yangi zakaz beriladi.
-  const activeWaiters = CFG.waiters.filter(w => w && w.id != null && String(w.name || '').trim());
+  // Yangi mijoz zakazlari faqat ONLAYN ofitsiantlarga navbat bilan beriladi.
+  const activeWaiters = CFG.waiters.filter(w => w && w.id != null && String(w.name || '').trim() && O.waiterShifts?.[w.id]?.online === true);
+  if (!activeWaiters.length) return s.status(503).json({ error: 'Hozir onlayn ofitsiant yo‘q. Iltimos, birozdan keyin urinib ko‘ring.' });
   if (!activeWaiters.length) return s.status(400).json({ error: "Faol ofitsiant yo'q" });
   const waiterIndex = O.nextWaiterIndex % activeWaiters.length;
   const w = activeWaiters[waiterIndex];
@@ -229,6 +246,31 @@ app.get('/api/waiters', (q, s) => {
   s.json(CFG.waiters.map(({ id, name }) => ({ id, name })));
 });
 
+// WAITER PRESENCE: ofitsiant smenasini boshlash/yakunlash va vaqtini qayd etish.
+app.get('/api/waiter/presence', wt, (q, s) => {
+  const shift = O.waiterShifts?.[q.w.id] || { online: false, onlineAt: 0, offlineAt: 0, sessions: [] };
+  s.json({ online: !!shift.online, onlineAt: Number(shift.onlineAt || 0), offlineAt: Number(shift.offlineAt || 0), sessions: shift.sessions || [] });
+});
+app.post('/api/waiter/presence', (q, s, n) => { q.query = q.body; n(); }, wt, (q, s) => {
+  if (typeof q.body.online !== 'boolean') return s.status(400).json({ error: 'Onlayn yoki oflayn holatini tanlang' });
+  const now = Date.now();
+  const shift = O.waiterShifts[q.w.id] || (O.waiterShifts[q.w.id] = { online: false, onlineAt: 0, offlineAt: 0, sessions: [] });
+  if (q.body.online && !shift.online) {
+    shift.online = true;
+    shift.onlineAt = now;
+    shift.offlineAt = 0;
+    shift.sessions.push({ start: now, end: 0 });
+    if (shift.sessions.length > 100) shift.sessions = shift.sessions.slice(-100);
+  } else if (!q.body.online && shift.online) {
+    shift.online = false;
+    shift.offlineAt = now;
+    const openSession = [...(shift.sessions || [])].reverse().find(x => !x.end);
+    if (openSession) openSession.end = now;
+  }
+  save('orders');
+  s.json({ ok: true, online: !!shift.online, onlineAt: Number(shift.onlineAt || 0), offlineAt: Number(shift.offlineAt || 0), sessions: shift.sessions || [] });
+});
+
 // WAITER ORDERS
 app.get('/api/waiter/orders', wt, (q, s) => {
   s.json(
@@ -251,6 +293,7 @@ app.post('/api/waiter/status', (q, s, n) => {
   q.query = q.body;
   n();
 }, wt, (q, s) => {
+  if (O.waiterShifts?.[q.w.id]?.online !== true) return s.status(403).json({ error: 'Buyurtma holatini o‘zgartirish uchun avval Onlayn bo‘ling.' });
   const o = O.list.find(
     o => o.id == q.body.orderId && o.waiter === q.w.id
   );
@@ -268,6 +311,7 @@ app.post('/api/waiter/add', (q, s, n) => {
   q.query = q.body;
   n();
 }, wt, (q, s) => {
+  if (O.waiterShifts?.[q.w.id]?.online !== true) return s.status(403).json({ error: 'Yangi buyurtma olish uchun avval Onlayn bo‘ling.' });
   const items = [];
 
   for (const i of q.body.items || []) {
@@ -332,6 +376,7 @@ app.post('/api/waiter/add', (q, s, n) => {
 
 // WAITER PRINT: queue this waiter's own order for the laptop bridge
 app.post('/api/waiter/print', (q, s, n) => { q.query = q.body; n(); }, wt, (q, s) => {
+  if (O.waiterShifts?.[q.w.id]?.online !== true) return s.status(403).json({ error: 'Chek yuborish uchun avval Onlayn bo‘ling.' });
   const o = O.list.find(x => String(x.id) === String(q.body.orderId) && x.waiter === q.w.id);
   if (!o) return s.status(404).json({ error: 'Buyurtma topilmadi' });
   if (!Array.isArray(o.items) || !o.items.length) return s.status(400).json({ error: 'Buyurtmada taom yo‘q' });
@@ -367,6 +412,7 @@ app.post('/api/printer/jobs/ack', (q, s) => {
 // CASHIER: all orders and printer settings
 app.get('/api/cashier/data', cashier, (q, s) => {
   const closedAt = Number(O.dayClosures.cashier || 0);
+  s.set('Cache-Control', 'no-store');
   s.json({
     orders: O.list.filter(o => Number(o.time || 0) >= closedAt).sort((a, b) => Number(b.time || 0) - Number(a.time || 0)),
     waiters: CFG.waiters.map(({ id, name }) => ({ id, name })),
@@ -428,7 +474,7 @@ app.get('/api/admin/data', adm, (q, s) => {
   s.json({
     cats: CFG.cats,
     menu: CFG.menu,
-    waiters: CFG.waiters,
+    waiters: CFG.waiters.map(w => ({ ...w, shift: O.waiterShifts?.[w.id] || { online: false, onlineAt: 0, offlineAt: 0, sessions: [] } })),
     orders: O.list.filter(o => Number(o.time || 0) >= closedAt),
     history: O.list,
     statsResetAt: Number(O.statsResetAt || 0)
@@ -542,13 +588,11 @@ app.delete('/api/admin/menu/:id', adm, (q, s) => {
 
 // ADMIN ADD WAITER
 app.post('/api/admin/waiter', adm, (q, s) => {
-  CFG.waiters.push({
-    id: Date.now(),
-    name: q.body.name,
-    pin: String(q.body.pin)
-  });
-
+  const id = Date.now();
+  CFG.waiters.push({ id, name: q.body.name, pin: String(q.body.pin) });
+  O.waiterShifts[id] = { online: false, onlineAt: 0, offlineAt: 0, sessions: [] };
   save('cfg');
+  save('orders');
   s.json({ ok: 1 });
 });
 
