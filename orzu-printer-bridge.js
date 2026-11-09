@@ -13,17 +13,52 @@ const esc = s => String(s ?? '').normalize('NFKD')
 const money = n => Math.round(Number(n)||0).toLocaleString('en-US') + " som";
 function line(s='') { return Buffer.from(esc(s) + '\n', 'ascii'); }
 function makeReceipt(o) {
-  const out = [Buffer.from([0x1b,0x40]), Buffer.from([0x1b,0x61,0x01]), Buffer.from([0x1b,0x45,0x01]), line('ORZU'), Buffer.from([0x1b,0x45,0x00]), line('RESTORANI'), line('--------------------------------')];
-  out.push(line('Buyurtma #' + o.id), line('Stol: ' + o.table), line('Ofitsiant: ' + (o.waiterName || '-')));
-  out.push(line(new Date(o.paidAt || o.time || Date.now()).toLocaleString('en-GB')), line('--------------------------------'));
-  out.push(Buffer.from([0x1b,0x61,0x00]));
+  const out = [
+    Buffer.from([0x1b,0x40]),
+    Buffer.from([0x1b,0x61,0x01]),
+    Buffer.from([0x1b,0x45,0x01]),
+    Buffer.from([0x1d,0x21,0x11]),
+    line('ORZU'),
+    Buffer.from([0x1d,0x21,0x00]),
+    line('RESTAURANT'),
+    Buffer.from([0x1b,0x45,0x00]),
+    line('ARNASOY'),
+    line('================================')
+  ];
+  out.push(
+    Buffer.from([0x1b,0x61,0x00]),
+    line('BUYURTMA  #' + o.id),
+    line('Stol: ' + o.table),
+    line('Ofitsiant: ' + (o.waiterName || '-')),
+    line(new Date(o.paidAt || o.time || Date.now()).toLocaleString('uz-UZ')),
+    line('--------------------------------')
+  );
   for (const it of (Array.isArray(o.items) ? o.items : [])) {
-    const name = esc(it.name).slice(0, 28);
+    const name = esc(it.name).slice(0, 32);
     const qty = Math.max(0, Number(it.qty)||0);
     const total = money((Number(it.price)||0)*qty);
-    out.push(line(name), line('  ' + qty + ' x ' + money(it.price) + '       ' + total));
+    out.push(line(name), line('  ' + qty + ' x ' + money(it.price) + ' = ' + total));
   }
-  out.push(line('--------------------------------'), Buffer.from([0x1b,0x45,0x01]), line('JAMI: ' + money(o.total)), Buffer.from([0x1b,0x45,0x00]), line('Tolov: ' + esc(o.paymentMethod || 'Naqd')), line('Xaridingiz uchun rahmat!'), line(''), line(''), line(''));
+  out.push(
+    line('--------------------------------'),
+    Buffer.from([0x1b,0x45,0x01]),
+    line('JAMI: ' + money(o.total)),
+    Buffer.from([0x1b,0x45,0x00]),
+    line('Tolov: ' + esc(o.paymentMethod || 'Naqd')),
+    line('================================'),
+    Buffer.from([0x1b,0x61,0x01]),
+    line('TASHRIFINGIZ UCHUN RAHMAT!'),
+    line(''),
+    line('Instagram sahifamizga obuna'),
+    line("bo'lgan bo'lsangiz, xizmat haqi"),
+    line('OLINMAYDI!'),
+    Buffer.from([0x1b,0x45,0x01]),
+    line('@orzu_arnasoy'),
+    Buffer.from([0x1b,0x45,0x00]),
+    line(''),
+    line(''),
+    line('')
+  );
   out.push(Buffer.from([0x1d,0x56,0x42,0x00]));
   return Buffer.concat(out);
 }
