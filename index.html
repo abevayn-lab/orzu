@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orzu — Menyu</title><link rel="stylesheet" href="/style.css"></head><body>
+<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Orzu — Menyu</title><link rel="stylesheet" href="/style.css"></head><body>
 <div class="hero"><h1 class="gold">ORZU</h1><div class="line"></div><p>RESTORAN · MENYU</p></div>
 <div class="tabs" id="tb"></div><div class="wrap"><div class="grid" id="g"></div></div>
 <div class="bar" id="bar"><div><small style="color:#b9a875">Jami</small><br><b class="gold" id="tot" style="font-size:20px"></b></div><button class="btn" onclick="op()">Buyurtma berish</button></div>
@@ -15,4 +15,45 @@ function op(){const L=M.filter(m=>cart[m.id]);sh.innerHTML=`<h2 class="gold">Buy
 async function send(){const t=tn.value;const r=await(await fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({table:t,items:Object.entries(cart).map(([id,qty])=>({id:+id,qty}))})})).json();
 if(r.error)return alert(r.error);cart={};T=t;sh.innerHTML=`<div class="ok"><i>✨</i><h2 class="gold">Rahmat!</h2><p style="margin-top:8px">Buyurtmangiz ofitsiantga yuborildi.<br>Tez orada xizmat ko‘rsatamiz.</p><button class="btn" style="margin-top:18px" onclick="md.classList.remove('on');ch(0,0);show()">Yopish</button></div>`;bar.classList.remove('on')}
 init();
+</script><style>
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+body{overscroll-behavior-y:contain}
+button,a,input,select,textarea{touch-action:manipulation}
+#orzu-exit-layer{position:fixed;inset:0;z-index:999999;background:#050403df;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(7px)}
+#orzu-exit-box{width:min(100%,340px);padding:25px 20px;border:1px solid #a77a32;border-radius:22px;background:linear-gradient(145deg,#2b1d10,#100c08);box-shadow:0 15px 50px #000b;text-align:center;color:#fff;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+#orzu-exit-box .crown{font-size:34px;color:#ffdc8a}#orzu-exit-box h2{font-size:20px;margin:8px 0;color:#ffe39a}#orzu-exit-box p{color:#d4c7b2;font-size:14px;margin:0 0 20px}
+#orzu-exit-actions{display:flex;gap:10px}#orzu-exit-actions button{flex:1;padding:13px 10px;border-radius:12px;font-weight:800;font-size:15px;border:1px solid #a77a32}
+#orzu-stay{background:#21170f;color:#ffe39a}#orzu-leave{background:linear-gradient(110deg,#ffe18d,#d58e20);color:#201405}
+</style>
+<div id="orzu-exit-layer" role="dialog" aria-modal="true" aria-labelledby="orzu-exit-title"><div id="orzu-exit-box"><div class="crown">♛</div><h2 id="orzu-exit-title">Ilovadan chiqmoqchimisiz?</h2><p>Chiqishni tasdiqlaysizmi?</p><div id="orzu-exit-actions"><button id="orzu-stay" type="button">Yo‘q, qolaman</button><button id="orzu-leave" type="button">Ha, chiqaman</button></div></div></div>
+<script>
+(function(){
+ const layer=document.getElementById('orzu-exit-layer'),stay=document.getElementById('orzu-stay'),leave=document.getElementById('orzu-leave');
+ let allowExit=false,waiting=false;
+ function arm(){try{history.pushState({orzuGuard:true},'',location.href)}catch(e){}}
+ function ask(){if(waiting)return;waiting=true;layer.style.display='flex';stay.focus()}
+ stay.addEventListener('click',()=>{layer.style.display='none';waiting=false;arm()});
+ leave.addEventListener('click',()=>{
+   allowExit=true;layer.style.display='none';waiting=false;
+   const from=location.pathname;
+   try{history.go(-2)}catch(e){}
+   setTimeout(()=>{
+     if(location.pathname===from){
+       if(from!=='/') location.assign('/');
+       else {allowExit=false;arm();alert('Ilovadan chiqish uchun brauzer oynasini yoping.')}
+     }
+   },450);
+ });
+ window.addEventListener('popstate',()=>{
+   if(allowExit)return;
+   ask();arm();
+ });
+ arm();
+ document.addEventListener('touchend',function(e){
+   const now=Date.now();
+   if(window.__orzuLastTap&&now-window.__orzuLastTap<320)e.preventDefault();
+   window.__orzuLastTap=now;
+ },{passive:false});
+ document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+})();
 </script></body></html>
