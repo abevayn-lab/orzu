@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#090807"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Ofitsiant"><link rel="apple-touch-icon" href="/waiter-icon.svg"><title>ORZU — Ofitsiant</title><link rel="manifest" href="/waiter-manifest.webmanifest"><link rel="icon" href="/waiter-icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css">
+<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#090807"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Ofitsiant"><link rel="apple-touch-icon" href="/waiter-icon.svg"><title>ORZU — Ofitsiant</title><link rel="manifest" href="/waiter-manifest.webmanifest"><link rel="icon" href="/waiter-icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css">
 <style>
 :root{--g:#f4c65e;--g2:#ffe39a;--muted:#c0b5a3}*{box-sizing:border-box}body{background:radial-gradient(ellipse at 50% -15%,#523315 0,#17100a 40%,#080706 80%);color:#fff;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}.hero{text-align:center;padding:18px 12px 15px}.hero .crown{font-size:38px;color:var(--g2)}.hero h1{font: bold 39px Georgia,serif;letter-spacing:3px;color:var(--g2);margin:0}.hero p{font-size:11px;letter-spacing:5px;color:#fff0c9;margin:0}.wrap{max-width:650px;margin:auto;padding:0 12px 25px}.profile,.stat,.order{background:linear-gradient(120deg,#291b10,#110d09 80%);border:1px solid #8a642c;border-radius:18px;box-shadow:0 7px 23px #0008}.profile{display:flex;align-items:center;gap:12px;padding:13px;margin-bottom:13px}.avatar{width:62px;height:62px;border-radius:50%;border:2px solid var(--g);display:grid;place-items:center;font-size:30px;background:#302012}.profile b{font-size:16px}.profile small{display:block;color:#c0b5a3;margin-top:4px}.online{color:#54e56c;font-size:12px;margin-top:5px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.stat{padding:13px;text-align:center}.stat span{font-size:13px;color:#eee}.stat b{display:block;color:var(--g2);font-size:21px;margin-top:6px}.newbtn{width:100%;border:0;border-radius:17px;padding:17px;background:linear-gradient(110deg,#ffe18d,#d58e20);color:#241606;font-size:17px;font-weight:900;margin:6px 0 17px;box-shadow:0 5px 18px #bd7c1d55}.section-title{display:flex;align-items:center;justify-content:space-between;margin:15px 3px 10px}.section-title h2{font-size:18px;margin:0}.order{padding:13px;margin:10px 0;border-radius:17px}.top,.bottom{display:flex;justify-content:space-between;align-items:center;gap:8px}.oid{font-weight:800;color:var(--g2)}.time{font-size:12px;color:#c7bba9}.items{font-size:14px;line-height:1.6;color:#e4ddd2;margin:10px 0}.itemline{display:flex;align-items:center;gap:10px;margin:7px 0}.foodpic{width:58px;height:52px;object-fit:cover;border-radius:11px;border:1px solid #987035;background:#25190e;flex-shrink:0}.foodfallback{width:58px;height:52px;border-radius:11px;border:1px solid #987035;background:#25190e;display:grid;place-items:center;font-size:25px;flex-shrink:0}.status{border-radius:20px;padding:5px 9px;font-size:11px;font-weight:800;background:#70252b}.status.accepted{background:#174e8b}.status.served{background:#95500b}.status.paid{background:#1c642b}.actions{display:flex;gap:8px}.actions button,.btn{border:1px solid #f5d47f;background:linear-gradient(110deg,#ffe18d,#d58e20);color:#201405;border-radius:11px;padding:10px 12px;font-weight:800}.actions .dark{background:#25190e;color:#ffdc8c;border-color:#8a642c}.empty{text-align:center;color:#c0b5a3;padding:22px}.login{max-width:400px;margin:20px auto;padding:18px;background:#21170f;border:1px solid #8a642c;border-radius:18px}.login input,.login select,.input{width:100%;padding:14px;border:1px solid #8a642c;background:#0b0907;color:white;border-radius:11px;margin:8px 0;font-size:16px}.sound{width:100%;background:#24190e;color:#ffdc8c;border:1px solid #8a642c;margin:0 0 12px}.modal{position:fixed;inset:0;background:#090807f5;z-index:99;overflow:auto;padding:16px}.modalbox{max-width:480px;margin:auto}.menuitem{display:flex;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid #5c4524}.qty button{background:#3b2a16;color:#ffe18d;border:1px solid #8a642c;border-radius:8px;padding:5px 11px}.muted{color:#c0b5a3;font-size:13px}
 </style></head><body>
@@ -16,11 +16,52 @@ function beep(order){try{unlockSound();const now=soundContext.currentTime,o=soun
 function draw(){const active=O.filter(o=>o.status!=='paid'),today=O.filter(o=>new Date(o.time).toDateString()===new Date().toDateString()),fresh=active.filter(o=>o.status==='new');app.innerHTML='<section class="profile"><div class="avatar">👨🏻‍🍳</div><div><b>'+esc(W.name||'Ofitsiant')+'</b><small>Ofitsiant</small><div class="online">● Onlayn</div></div><button class="btn" style="margin-left:auto" onclick="logout()">Chiqish</button></section><button class="btn sound" onclick="enableAlerts()">🔔 Ovozli xabarni yoqish</button><div class="stats"><div class="stat"><span>Bugungi buyurtmalar</span><b>'+today.length+'</b></div><div class="stat"><span>Bugungi tushum</span><b style="font-size:17px">'+f(today.reduce((s,o)=>s+Number(o.total||0),0))+'</b></div></div><button class="newbtn" onclick="openAdd(0)">✓　Yangi buyurtma　'+(fresh.length?'<span style="background:#bd2431;color:white;border-radius:20px;padding:3px 8px">'+fresh.length+'</span>':'')+'　›</button><div class="section-title"><h2>▤ Mening buyurtmalarim</h2><span class="muted">'+active.length+' ta faol</span></div>'+O.slice().reverse().map(card).join('')+'<div class="empty">'+(O.length?'':'Hozircha buyurtma yo‘q')+'</div>'}
 function card(o){return '<article class="order"><div class="top"><span class="oid">#'+esc(o.id)+' · Stol '+esc(o.table)+'</span><span class="time">'+(o.time?new Date(o.time).toLocaleTimeString('uz-UZ',{hour:'2-digit',minute:'2-digit'}):'')+'</span></div><div class="items">'+(o.items||[]).map(i=>'<div class="itemline">'+(i.img?'<img class="foodpic" src="'+esc(i.img)+'" onerror="this.outerHTML=\'<span class=foodfallback>🍽️</span>\'">':'<span class="foodfallback">🍽️</span>')+'<span>'+esc(i.name)+' × '+esc(i.qty)+'</span></div>').join('')+'</div><div class="bottom"><span class="status '+esc(o.status)+'">'+esc(ST[o.status]||o.status)+'</span><b style="color:#ffe39a">'+f(o.total)+'</b></div>'+(o.status!=='paid'?'<div class="actions" style="margin-top:10px"><button class="dark" onclick="openAdd('+Number(o.id)+')">+ Qo‘shish</button>'+(NX[o.status]?'<button onclick="st('+Number(o.id)+',\''+NX[o.status][0]+'\')">'+NX[o.status][1]+'</button>':'')+'</div>':'')+'</article>'}
 function enableAlerts(){unlockSound();if('Notification'in window)Notification.requestPermission();alert('Ovoz yoqildi. Yangi zakaz kelganda stol raqami aytiladi.')}
-function logout(){localStorage.removeItem('w');W=null;knownNewIds.clear();login()}
+function logout(){if(!confirm('Ofitsiant hisobidan chiqmoqchimisiz?'))return;localStorage.removeItem('w');W=null;knownNewIds.clear();login()}
 async function st(orderId,status){await fetch('/api/waiter/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...W,orderId,status})});load()}
 async function openAdd(id){unlockSound();TGT=id;SEL={};if(!MENU.length)MENU=(await(await fetch('/api/menu')).json()).menu;const o=O.find(o=>o.id==id);const d=document.createElement('div');d.id='pk';d.className='modal';d.innerHTML='<div class="modalbox"><h2 style="color:#ffe39a">'+(id?'Stol '+esc(o.table)+': qo‘shish':'Yangi buyurtma')+'</h2>'+(id?'':'<input class="input" id="tb" placeholder="Stol raqami">')+'<div id="pl"></div><div class="actions" style="margin-top:15px"><button class="dark" onclick="pk.remove()">Bekor</button><button onclick="sendAdd()">Saqlash</button></div></div>';document.body.appendChild(d);pdraw()}
 function pdraw(){pl.innerHTML=MENU.length?MENU.map(m=>'<div class="menuitem">'+(m.img?'<img class="foodpic" src="'+esc(m.img)+'" onerror="this.style.display=\'none\'">':'<span class="foodfallback">🍽️</span>')+'<span>'+esc(m.name)+'<br><small class="muted">'+f(m.price)+'</small></span><span class="qty"><button onclick="pq('+Number(m.id)+',-1)">−</button> <b>'+Number(SEL[m.id]||0)+'</b> <button onclick="pq('+Number(m.id)+',1)">+</button></span></div>').join(''):'<p>Menyu bo‘sh</p>'}
 function pq(id,d){SEL[id]=Math.max(0,Math.min(99,(SEL[id]||0)+d));pdraw()}
 async function sendAdd(){const items=Object.entries(SEL).filter(e=>e[1]>0).map(e=>({id:+e[0],qty:e[1]}));if(!items.length)return alert('Taom tanlang');const b={...W,items};if(TGT)b.orderId=TGT;else{b.table=tb.value;if(!b.table.trim())return alert('Stol raqamini kiriting')}const r=await fetch('/api/waiter/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok)return alert((await r.json()).error||'Xato');pk.remove();load()}
 if(W)load();else login();setInterval(()=>W&&load(),4000);
+</script><style>
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+body{overscroll-behavior-y:contain}
+button,a,input,select,textarea{touch-action:manipulation}
+#orzu-exit-layer{position:fixed;inset:0;z-index:999999;background:#050403df;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(7px)}
+#orzu-exit-box{width:min(100%,340px);padding:25px 20px;border:1px solid #a77a32;border-radius:22px;background:linear-gradient(145deg,#2b1d10,#100c08);box-shadow:0 15px 50px #000b;text-align:center;color:#fff;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+#orzu-exit-box .crown{font-size:34px;color:#ffdc8a}#orzu-exit-box h2{font-size:20px;margin:8px 0;color:#ffe39a}#orzu-exit-box p{color:#d4c7b2;font-size:14px;margin:0 0 20px}
+#orzu-exit-actions{display:flex;gap:10px}#orzu-exit-actions button{flex:1;padding:13px 10px;border-radius:12px;font-weight:800;font-size:15px;border:1px solid #a77a32}
+#orzu-stay{background:#21170f;color:#ffe39a}#orzu-leave{background:linear-gradient(110deg,#ffe18d,#d58e20);color:#201405}
+</style>
+<div id="orzu-exit-layer" role="dialog" aria-modal="true" aria-labelledby="orzu-exit-title"><div id="orzu-exit-box"><div class="crown">♛</div><h2 id="orzu-exit-title">Ilovadan chiqmoqchimisiz?</h2><p>Chiqishni tasdiqlaysizmi?</p><div id="orzu-exit-actions"><button id="orzu-stay" type="button">Yo‘q, qolaman</button><button id="orzu-leave" type="button">Ha, chiqaman</button></div></div></div>
+<script>
+(function(){
+ const layer=document.getElementById('orzu-exit-layer'),stay=document.getElementById('orzu-stay'),leave=document.getElementById('orzu-leave');
+ let allowExit=false,waiting=false;
+ function arm(){try{history.pushState({orzuGuard:true},'',location.href)}catch(e){}}
+ function ask(){if(waiting)return;waiting=true;layer.style.display='flex';stay.focus()}
+ stay.addEventListener('click',()=>{layer.style.display='none';waiting=false;arm()});
+ leave.addEventListener('click',()=>{
+   allowExit=true;layer.style.display='none';waiting=false;
+   const from=location.pathname;
+   try{history.go(-2)}catch(e){}
+   setTimeout(()=>{
+     if(location.pathname===from){
+       if(from!=='/') location.assign('/');
+       else {allowExit=false;arm();alert('Ilovadan chiqish uchun brauzer oynasini yoping.')}
+     }
+   },450);
+ });
+ window.addEventListener('popstate',()=>{
+   if(allowExit)return;
+   ask();arm();
+ });
+ arm();
+ document.addEventListener('touchend',function(e){
+   const now=Date.now();
+   if(window.__orzuLastTap&&now-window.__orzuLastTap<320)e.preventDefault();
+   window.__orzuLastTap=now;
+ },{passive:false});
+ document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+})();
 </script></body></html>
