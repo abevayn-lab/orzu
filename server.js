@@ -414,7 +414,7 @@ app.get('/api/cashier/data', cashier, (q, s) => {
   s.set('Cache-Control', 'no-store');
   s.json({
     orders: O.list.filter(o => Number(o.time || 0) >= closedAt).sort((a, b) => Number(b.time || 0) - Number(a.time || 0)),
-    waiters: CFG.waiters.map(({ id, name }) => ({ id, name })),
+    waiters: CFG.waiters.map(({ id, name }) => ({ id, name, shift: O.waiterShifts?.[id] || { online: false, onlineAt: 0, offlineAt: 0, sessions: [] } })),
     settings: O.cashierSettings || { printerIp: '192.168.1.51' }
   });
 });
@@ -469,14 +469,10 @@ app.post('/api/cashier/close-day', cashier, (q, s) => {
   const closedAt = Number(O.dayClosures.cashier || 0);
   const currentOrders = O.list.filter(o => Number(o.time || 0) >= closedAt);
   const pending = currentOrders.filter(o => o.status !== 'paid');
-  if (pending.length) {
-    return s.status(409).json({
-      error: 'Kun yopilmadi. Avval to‘lov kutilayotgan ' + pending.length + ' ta buyurtmani yakunlang.'
-    });
-  }
   const paid = currentOrders.filter(o => o.status === 'paid');
   const summary = {
     orders: paid.length,
+    pending: pending.length,
     total: paid.reduce((sum, o) => sum + Number(o.total || 0), 0)
   };
   O.dayClosures.cashier = Date.now();
