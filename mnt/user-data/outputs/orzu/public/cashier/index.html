@@ -7,7 +7,7 @@
 <main class="wrap">
 <section id="login" class="login"><h2 style="color:#ffe39a;margin-top:0">Kassir kirishi</h2><input id="pass" class="input" type="password" placeholder="Kassir paroli"><button class="btn" style="width:100%" onclick="signIn()">Kirish</button><p class="muted">Kassir paroli hozircha Admin paroli bilan bir xil.</p></section>
 <section id="app" class="hidden">
-<div class="panel toprow"><div><b style="color:#ffe39a;font-size:18px">Kassir boshqaruvi</b><div class="muted">Buyurtmalar va to‘lovlar</div></div><div class="toolbar"><input id="cashierName" class="input" style="width:150px" value="Kassir" aria-label="Kassir ismi"><button class="btn dark" onclick="toggleSettings()">⚙ Chek sozlamasi</button><button class="btn dark" onclick="logout()">Chiqish</button></div></div>
+<div class="panel toprow"><div><b style="color:#ffe39a;font-size:18px">Kassir boshqaruvi</b><div class="muted">Buyurtmalar va to‘lovlar</div></div><div class="toolbar"><input id="cashierName" class="input" style="width:150px" value="Kassir" aria-label="Kassir ismi"><button class="btn" onclick="closeDay()">🔒 Kunni yopish</button><button class="btn dark" onclick="toggleSettings()">⚙ Chek sozlamasi</button><button class="btn dark" onclick="logout()">Chiqish</button></div></div>
 <section id="settings" class="settings"><h3 style="color:#ffe39a;margin-top:0">Chek printer sozlamalari</h3><label class="muted">Printer IP manzili</label><div class="settingsrow"><input id="printerIp" class="input" value="192.168.1.51" placeholder="192.168.1.51"><button class="btn" onclick="saveSettings()">Saqlash</button></div><p class="muted">Hozirgi printer IP: 192.168.1.51. Chek 72 mm formatda tayyorlanadi. Chop etishda noutbukdagi Windows printer oynasidan shu tarmoq printerini tanlang.</p></section>
 <div class="stats"><div class="stat"><span>To‘lov kutilmoqda</span><b id="pendingCount">0</b></div><div class="stat"><span>Bugun to‘langan</span><b id="paidCount">0</b></div><div class="stat"><span>Bugungi tushum</span><b id="paidSum">0 so‘m</b></div></div>
 <div class="tabs"><button id="pendingTab" class="tab on" onclick="setTab('pending')">To‘lov kutilmoqda</button><button id="paidTab" class="tab" onclick="setTab('paid')">To‘langanlar</button></div>
@@ -22,7 +22,7 @@ async function api(url,method='GET',body){const r=await fetch(url,{method,header
 async function signIn(){key=$('pass').value;if(!key)return alert('Parolni kiriting');try{await refresh();localStorage.setItem('orzu_cashier_key',key);$('login').classList.add('hidden');$('app').classList.remove('hidden')}catch(e){key='';alert(e.message)}}
 function logout(clear=true){if(clear){localStorage.removeItem('orzu_cashier_key')}key='';$('app').classList.add('hidden');$('login').classList.remove('hidden')}
 async function refresh(){if(!key)return;try{DATA=await api('/api/cashier/data');$('printerIp').value=DATA.settings?.printerIp||'192.168.1.51';updateStats();render()}catch(e){if(e.message.includes('paroli'))alert(e.message)}}
-function updateStats(){const now=new Date(),today=DATA.orders.filter(o=>o.status==='paid'&&new Date(o.paidAt||o.time).toDateString()===now.toDateString());$('pendingCount').textContent=DATA.orders.filter(o=>o.status!=='paid').length;$('paidCount').textContent=today.length;$('paidSum').textContent=money(today.reduce((s,o)=>s+Number(o.total||0),0))}
+function updateStats(){const paid=DATA.orders.filter(o=>o.status==='paid');$('pendingCount').textContent=DATA.orders.filter(o=>o.status!=='paid').length;$('paidCount').textContent=paid.length;$('paidSum').textContent=money(paid.reduce((s,o)=>s+Number(o.total||0),0))}
 function setTab(t){tab=t;$('pendingTab').classList.toggle('on',t==='pending');$('paidTab').classList.toggle('on',t==='paid');render()}
 function render(){if(!$('orders'))return;const q=$('search').value.trim().toLowerCase();const list=DATA.orders.filter(o=>(tab==='paid'?o.status==='paid':o.status!=='paid')&&(!q||[o.id,o.table,o.waiterName].join(' ').toLowerCase().includes(q)));$('orders').innerHTML=list.length?list.map(card).join(''):'<div class="empty">Bu bo‘limda buyurtma yo‘q</div>'}
 function card(o){return '<article class="order"><div class="orderhead"><b style="color:#ffe39a">Buyurtma #'+esc(o.id)+' · Stol '+esc(o.table)+'</b><span class="badge '+(o.status==='paid'?'paid':'')+'">'+(o.status==='paid'?'To‘langan':'To‘lov kutilmoqda')+'</span></div><div class="muted" style="margin-top:6px">Ofitsiant: '+esc(o.waiterName||'—')+' · '+new Date(o.time).toLocaleString('uz-UZ')+'</div><div class="items">'+(o.items||[]).map(i=>'<div class="item"><span>'+esc(i.name)+' × '+Number(i.qty)+'</span><b>'+money(Number(i.price)*Number(i.qty))+'</b></div>').join('')+'</div><div class="total"><span>JAMI</span><span>'+money(o.total)+'</span></div><div class="actions">'+(o.status==='paid'?'<button class="btn" onclick="reprint('+Number(o.id)+')">🖨 Chek chiqarish</button>':'<button class="btn" onclick="markPaid('+Number(o.id)+')">✓ To‘landi · Chek chiqarish</button><button class="btn dark" onclick="reprint('+Number(o.id)+')">Chek (oldindan)</button>')+'</div>'+(o.status==='paid'?'<div class="muted" style="margin-top:9px">To‘lov: '+new Date(o.paidAt||o.time).toLocaleString('uz-UZ')+' · '+esc(o.paymentMethod||'Naqd')+'</div>':'')+'</article>'}
@@ -49,6 +49,20 @@ async function reprint(id){
   const o=DATA.orders.find(x=>Number(x.id)===id);if(!o)return;
   try{await localPrint(o);alert('Chek printerga qayta yuborildi.')}
   catch(e){alert('Chek chiqarmadi: '+e.message+'\nORZU printer yordamchi dasturi ishga tushganini tekshiring.')}
+}
+async function closeDay(){
+  if(busy)return;
+  const pending=DATA.orders.filter(o=>o.status!=='paid');
+  if(pending.length){alert('Kun yopilmadi. Avval to‘lov kutilayotgan '+pending.length+' ta buyurtmani yakunlang.');return}
+  const paid=DATA.orders.filter(o=>o.status==='paid');
+  const total=paid.reduce((sum,o)=>sum+Number(o.total||0),0);
+  if(!confirm('KUNLIK HISOBOTNI YOPAMIZMI?\\n\\nTo‘langan buyurtmalar: '+paid.length+' ta\\nJami tushum: '+money(total)+'\\n\\nBuyurtmalar tarixi o‘chirilmaydi. Admin panel statistikasi o‘zgarmaydi.'))return;
+  busy=true;
+  try{
+    const d=await api('/api/cashier/close-day','POST',{});
+    await refresh();
+    alert('Kun muvaffaqiyatli yopildi.\\nBuyurtmalar: '+d.summary.orders+' ta\\nTushum: '+money(d.summary.total)+'\\nTarix saqlab qolindi.');
+  }catch(e){alert(e.message)}finally{busy=false}
 }
 async function saveSettings(){try{const d=await api('/api/cashier/settings','POST',{printerIp:$('printerIp').value});DATA.settings=d.settings;alert('Printer IP manzili saqlandi: '+d.settings.printerIp)}catch(e){alert(e.message)}}
 function toggleSettings(){$('settings').classList.toggle('show')}
