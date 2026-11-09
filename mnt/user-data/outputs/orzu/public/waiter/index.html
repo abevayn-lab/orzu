@@ -31,8 +31,9 @@ function card(o){return '<article class="order"><div class="top"><span class="oi
 function enableAlerts(){unlockSound();if('Notification'in window)Notification.requestPermission();alert('Ovoz yoqildi. Yangi zakaz kelganda stol raqami aytiladi.')}
 function logout(){if(!confirm('Ofitsiant hisobidan chiqmoqchimisiz?'))return;localStorage.removeItem('w');W=null;knownNewIds.clear();login()}
 
+function toast(m,bad){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:100000;max-width:90%;padding:13px 18px;border-radius:14px;font-weight:700;font-size:15px;color:'+(bad?'#fff':'#241606')+';background:'+(bad?'#bd2431':'#ffe39a')+';box-shadow:0 6px 24px #000a';document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
 async function printOrder(orderId){
-  if(!confirm('Shu buyurtma uchun chek chiqarilsinmi?'))return;
+  if(window.__printing)return;window.__printing=true;
   const buttons=[...document.querySelectorAll('button')];
   const btn=buttons.find(b=>b.getAttribute('onclick')==='printOrder('+Number(orderId)+')');
   if(btn){btn.disabled=true;btn.textContent='Yuborilmoqda...'}
@@ -40,9 +41,10 @@ async function printOrder(orderId){
     const r=await fetch('/api/waiter/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...W,orderId})});
     const data=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(data.error||'Chek yuborilmadi');
+    toast('✓ Chek printerga yuborildi');
     if(btn)btn.textContent='Yuborildi ✓';
-    alert('Chek printerga yuborildi. Printer chiqarguncha kompyuter yoqilgan bo‘lsin.');
-  }catch(e){alert(e.message||'Chek yuborishda xato');if(btn){btn.disabled=false;btn.textContent='🧾 Chek chiqarish'}}
+  }catch(e){toast('✕ '+(e.message||'Chek yuborishda xato'),true);if(btn){btn.disabled=false;btn.textContent='🧾 Chek chiqarish'}}
+  finally{window.__printing=false}
 }
 
 async function st(orderId,status){await fetch('/api/waiter/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...W,orderId,status})});load()}
