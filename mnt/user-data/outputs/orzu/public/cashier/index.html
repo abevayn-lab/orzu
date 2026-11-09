@@ -56,12 +56,12 @@ async function closeDay(){
   if(pending.length){alert('Kun yopilmadi. Avval to‘lov kutilayotgan '+pending.length+' ta buyurtmani yakunlang.');return}
   const paid=DATA.orders.filter(o=>o.status==='paid');
   const total=paid.reduce((sum,o)=>sum+Number(o.total||0),0);
-  if(!confirm('KUNLIK HISOBOTNI YOPAMIZMI?\\n\\nTo‘langan buyurtmalar: '+paid.length+' ta\\nJami tushum: '+money(total)+'\\n\\nBuyurtmalar tarixi o‘chirilmaydi. Admin panel statistikasi o‘zgarmaydi.'))return;
+  if(!confirm('KUNLIK HISOBOTNI YOPAMIZMI?\n\nTo‘langan buyurtmalar: '+paid.length+' ta\nJami tushum: '+money(total)+'\n\nBuyurtmalar tarixi o‘chirilmaydi. Admin panel statistikasi o‘zgarmaydi.'))return;
   busy=true;
   try{
     const d=await api('/api/cashier/close-day','POST',{});
     await refresh();
-    alert('Kun muvaffaqiyatli yopildi.\\nBuyurtmalar: '+d.summary.orders+' ta\\nTushum: '+money(d.summary.total)+'\\nTarix saqlab qolindi.');
+    alert('Kun muvaffaqiyatli yopildi.\nBuyurtmalar: '+d.summary.orders+' ta\nTushum: '+money(d.summary.total)+'\nTarix saqlab qolindi.');
   }catch(e){alert(e.message)}finally{busy=false}
 }
 async function saveSettings(){try{const d=await api('/api/cashier/settings','POST',{printerIp:$('printerIp').value});DATA.settings=d.settings;alert('Printer IP manzili saqlandi: '+d.settings.printerIp)}catch(e){alert(e.message)}}
