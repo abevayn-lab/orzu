@@ -252,7 +252,7 @@ app.post('/api/waiter/status', (q, s, n) => {
     o => o.id == q.body.orderId && o.waiter === q.w.id
   );
 
-  if (o && ['accepted', 'served', 'paid'].includes(q.body.status)) {
+  if (o && ['accepted', 'served'].includes(q.body.status)) {
     o.status = q.body.status;
     save('orders');
   }
