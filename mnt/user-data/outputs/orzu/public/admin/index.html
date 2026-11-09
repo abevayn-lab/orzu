@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ORZU — Admin</title><meta name="theme-color" content="#111014"><link rel="manifest" href="/admin-manifest.webmanifest"><link rel="icon" href="/admin-icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"></head><body>
+<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>ORZU — Admin</title><meta name="theme-color" content="#111014"><link rel="manifest" href="/admin-manifest.webmanifest"><link rel="icon" href="/admin-icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"></head><body>
 <div class="hero" style="padding:20px"><h1 class="gold" style="font-size:36px">ORZU</h1><p>ADMIN</p></div>
 <div class="tabs" id="tb"></div><div class="wrap" id="app"></div>
 <script>
@@ -36,4 +36,45 @@ async function addW(){if(!wn.value||!wp.value)return;await api('/api/admin/waite
 async function delW(id){if(confirm("O'chirilsinmi?")){await api('/api/admin/waiter/'+id,'DELETE');load()}}
 function orders(){return `<div class="stat"><button class="btn" style="width:100%;margin-bottom:10px" onclick="enableNotifications()">🔔 Bildirishnomalarni yoqish</button><p style="color:#b9a875">Yangi buyurtmalar avtomatik yangilanadi. Bildirishnoma olish uchun shu sahifaga ruxsat bering.</p></div><div class="stat" style="overflow:auto">${tbl(['#','Stol','Ofitsiant','Summa','Holat','Vaqt'],D.orders.slice(-60).reverse().map(o=>[o.id,o.table,o.waiterName,f(o.total),`<span class="badge ${o.status}">${o.status}</span>`,new Date(o.time).toLocaleString('ru')]))}</div>`}
 load();setInterval(()=>{if(P)load().catch(()=>{})},5000);
+</script><style>
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+body{overscroll-behavior-y:contain}
+button,a,input,select,textarea{touch-action:manipulation}
+#orzu-exit-layer{position:fixed;inset:0;z-index:999999;background:#050403df;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(7px)}
+#orzu-exit-box{width:min(100%,340px);padding:25px 20px;border:1px solid #a77a32;border-radius:22px;background:linear-gradient(145deg,#2b1d10,#100c08);box-shadow:0 15px 50px #000b;text-align:center;color:#fff;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+#orzu-exit-box .crown{font-size:34px;color:#ffdc8a}#orzu-exit-box h2{font-size:20px;margin:8px 0;color:#ffe39a}#orzu-exit-box p{color:#d4c7b2;font-size:14px;margin:0 0 20px}
+#orzu-exit-actions{display:flex;gap:10px}#orzu-exit-actions button{flex:1;padding:13px 10px;border-radius:12px;font-weight:800;font-size:15px;border:1px solid #a77a32}
+#orzu-stay{background:#21170f;color:#ffe39a}#orzu-leave{background:linear-gradient(110deg,#ffe18d,#d58e20);color:#201405}
+</style>
+<div id="orzu-exit-layer" role="dialog" aria-modal="true" aria-labelledby="orzu-exit-title"><div id="orzu-exit-box"><div class="crown">♛</div><h2 id="orzu-exit-title">Ilovadan chiqmoqchimisiz?</h2><p>Chiqishni tasdiqlaysizmi?</p><div id="orzu-exit-actions"><button id="orzu-stay" type="button">Yo‘q, qolaman</button><button id="orzu-leave" type="button">Ha, chiqaman</button></div></div></div>
+<script>
+(function(){
+ const layer=document.getElementById('orzu-exit-layer'),stay=document.getElementById('orzu-stay'),leave=document.getElementById('orzu-leave');
+ let allowExit=false,waiting=false;
+ function arm(){try{history.pushState({orzuGuard:true},'',location.href)}catch(e){}}
+ function ask(){if(waiting)return;waiting=true;layer.style.display='flex';stay.focus()}
+ stay.addEventListener('click',()=>{layer.style.display='none';waiting=false;arm()});
+ leave.addEventListener('click',()=>{
+   allowExit=true;layer.style.display='none';waiting=false;
+   const from=location.pathname;
+   try{history.go(-2)}catch(e){}
+   setTimeout(()=>{
+     if(location.pathname===from){
+       if(from!=='/') location.assign('/');
+       else {allowExit=false;arm();alert('Ilovadan chiqish uchun brauzer oynasini yoping.')}
+     }
+   },450);
+ });
+ window.addEventListener('popstate',()=>{
+   if(allowExit)return;
+   ask();arm();
+ });
+ arm();
+ document.addEventListener('touchend',function(e){
+   const now=Date.now();
+   if(window.__orzuLastTap&&now-window.__orzuLastTap<320)e.preventDefault();
+   window.__orzuLastTap=now;
+ },{passive:false});
+ document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+})();
 </script></body></html>
