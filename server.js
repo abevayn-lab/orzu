@@ -115,7 +115,7 @@ let q0 = Promise.resolve();
 function save(k) {
   if (!SU) {
     fs.writeFileSync(LF, JSON.stringify({ CFG, O }));
-    return;
+    return Promise.resolve();
   }
 
   const body = JSON.stringify({
@@ -133,8 +133,9 @@ function save(k) {
       body
     });
 
-    if (!r.ok) console.error('Saqlash xato:', await r.text());
-  }).catch(console.error);
+    if (!r.ok) throw new Error('Saqlash xato: ' + await r.text());
+  });
+  return q0;
 }
 
 // ADMIN AUTH
@@ -403,7 +404,7 @@ app.get('/api/cashier/data', cashier, (q, s) => {
   });
 });
 
-app.post('/api/cashier/waiter-presence', cashier, (q, s) => {
+app.post('/api/cashier/waiter-presence', cashier, async (q, s) => {
   const waiter = CFG.waiters.find(w => String(w.id) === String(q.body.waiterId));
   if (!waiter) return s.status(404).json({ error: 'Ofitsiant topilmadi' });
   if (typeof q.body.online !== 'boolean') return s.status(400).json({ error: 'Onlayn yoki oflayn holatini tanlang' });
@@ -421,7 +422,12 @@ app.post('/api/cashier/waiter-presence', cashier, (q, s) => {
     const openSession = [...(shift.sessions || [])].reverse().find(x => !x.end);
     if (openSession) openSession.end = now;
   }
-  save('orders');
+  try {
+    await save('orders');
+  } catch (e) {
+    console.error('Ofitsiant smenasini saqlashda xato:', e);
+    return s.status(500).json({ error: 'Ofitsiant holati bazaga saqlanmadi. Qayta urinib ko‘ring.' });
+  }
   s.json({ ok: true, waiterId: waiter.id, name: waiter.name, online: !!shift.online, onlineAt: Number(shift.onlineAt || 0), offlineAt: Number(shift.offlineAt || 0) });
 });
 
