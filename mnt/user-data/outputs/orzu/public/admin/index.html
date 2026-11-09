@@ -1,13 +1,16 @@
-<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orzu — Admin</title><link rel="stylesheet" href="/style.css"></head><body>
+<!DOCTYPE html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orzu — Admin</title><meta name="theme-color" content="#111014"><link rel="manifest" href="/admin-manifest.webmanifest"><link rel="icon" href="/admin-icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"></head><body>
 <div class="hero" style="padding:20px"><h1 class="gold" style="font-size:36px">ORZU</h1><p>ADMIN PANEL</p></div>
 <div class="tabs" id="tb"></div><div class="wrap" id="app"></div>
 <script>
-let P=localStorage.ap||'',D,tab=0,img='',edit=null;
+let P=localStorage.ap||'',D,tab=0,img='',edit=null,knownOrderIds=null;
+function alertNewOrders(list){const fresh=list.filter(o=>o.status==='new'&&knownOrderIds&&!knownOrderIds.has(o.id));if(fresh.length){try{const a=new AudioContext(),o=a.createOscillator(),g=a.createGain();o.frequency.value=950;g.gain.value=.12;o.connect(g);g.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},450);navigator.vibrate&&navigator.vibrate([250,120,250])}catch(e){}if('Notification'in window&&Notification.permission==='granted'){fresh.forEach(o=>new Notification('ORZU — Yangi buyurtma',{body:'Stol '+o.table+' · '+o.waiterName+' · '+f(o.total),icon:'/admin-icon.svg'}))}}knownOrderIds=new Set(list.map(o=>o.id))}
+async function enableNotifications(){if(!('Notification'in window))return alert('Bu brauzer bildirishnomani qo‘llamaydi');const p=await Notification.requestPermission();alert(p==='granted'?'Bildirishnomalar yoqildi!':'Bildirishnomaga ruxsat berilmadi')}
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/admin-sw.js').catch(()=>{}));
 const f=n=>n.toLocaleString('ru')+" so'm",TABS=['Statistika','Menyu','Bo‘limlar','Ofitsiantlar','Buyurtmalar'];
 const H=()=>({'Content-Type':'application/json','x-admin':P});
 async function api(u,m='GET',b){const r=await fetch(u,{method:m,headers:H(),body:b?JSON.stringify(b):undefined});if(r.status==401){localStorage.removeItem('ap');P='';login();throw 0}return r.json()}
 function login(){tb.innerHTML='';app.innerHTML=`<div class="stat" style="max-width:380px;margin:auto"><h2 class="gold">Kirish</h2><input id="pw" type="password" placeholder="Parol"><button class="btn" style="width:100%;margin-top:8px" onclick="P=pw.value;localStorage.ap=P;load()">Kirish</button></div>`}
-async function load(){if(!P)return login();D=await api('/api/admin/data');render()}
+async function load(){if(!P)return login();D=await api('/api/admin/data');alertNewOrders(D.orders);render()}
 function render(){tb.innerHTML=TABS.map((t,i)=>`<button class="tab ${i==tab?'on':''}" onclick="tab=${i};render()">${t}</button>`).join('');app.innerHTML=[stats,menu,categories,waiters,orders][tab]()}
 const grp=(a,k)=>{const m={};a.forEach(o=>{const x=m[k(o)]||(m[k(o)]={n:0,s:0});x.n++;x.s+=o.total});return Object.entries(m).sort((a,b)=>b[1].s-a[1].s)};
 const tbl=(h,r)=>`<table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${r.map(x=>`<tr>${x.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
@@ -31,6 +34,6 @@ async function removeCategory(i){const name=D.cats[i];if(!confirm('"'+name+'" bo
 function waiters(){return `<div class="stat"><h3 class="gold">Ofitsiant qo'shish</h3><input id="wn" placeholder="Ism"><input id="wp" placeholder="PIN kod (masalan 1234)"><button class="btn" onclick="addW()">Qo'shish</button></div><div class="stat sp">${tbl(['Ism','PIN',''],D.waiters.map(w=>[w.name,w.pin,`<button class="btn sm red" onclick="delW(${w.id})">✕</button>`]))}</div>`}
 async function addW(){if(!wn.value||!wp.value)return;await api('/api/admin/waiter','POST',{name:wn.value,pin:wp.value});load()}
 async function delW(id){if(confirm("O'chirilsinmi?")){await api('/api/admin/waiter/'+id,'DELETE');load()}}
-function orders(){return `<div class="stat" style="overflow:auto">${tbl(['#','Stol','Ofitsiant','Summa','Holat','Vaqt'],D.orders.slice(-60).reverse().map(o=>[o.id,o.table,o.waiterName,f(o.total),`<span class="badge ${o.status}">${o.status}</span>`,new Date(o.time).toLocaleString('ru')]))}</div>`}
-load();
+function orders(){return `<div class="stat"><button class="btn" style="width:100%;margin-bottom:10px" onclick="enableNotifications()">🔔 Bildirishnomalarni yoqish</button><p style="color:#b9a875">Yangi buyurtmalar avtomatik yangilanadi. Bildirishnoma olish uchun shu sahifaga ruxsat bering.</p></div><div class="stat" style="overflow:auto">${tbl(['#','Stol','Ofitsiant','Summa','Holat','Vaqt'],D.orders.slice(-60).reverse().map(o=>[o.id,o.table,o.waiterName,f(o.total),`<span class="badge ${o.status}">${o.status}</span>`,new Date(o.time).toLocaleString('ru')]))}</div>`}
+load();setInterval(()=>{if(P)load().catch(()=>{})},5000);
 </script></body></html>
