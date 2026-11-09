@@ -84,6 +84,7 @@ async function load() {
   if (!Number.isFinite(Number(O.statsResetAt))) O.statsResetAt = 0;
   if (!O.dayClosures.waiters || typeof O.dayClosures.waiters !== 'object') O.dayClosures.waiters = {};
   if (!Number.isFinite(Number(O.dayClosures.admin))) O.dayClosures.admin = 0;
+  if (!Number.isFinite(Number(O.dayClosures.cashier))) O.dayClosures.cashier = 0;
   if (!Number.isFinite(Number(O.dayClosures.administrator))) O.dayClosures.administrator = 0;
   if (!O.cashierSettings || typeof O.cashierSettings !== 'object') O.cashierSettings = { printerIp: '192.168.1.51' };
   if (typeof O.cashierSettings.printerIp !== 'string') O.cashierSettings.printerIp = '192.168.1.51';
@@ -366,7 +367,7 @@ app.post('/api/printer/jobs/ack', (q, s) => {
 // CASHIER: all orders and printer settings
 app.get('/api/cashier/data', cashier, (q, s) => {
   s.json({
-    orders: O.list.slice().sort((a, b) => Number(b.time || 0) - Number(a.time || 0)),
+    orders: O.list.filter(o => Number(o.time || 0) >= Number(O.dayClosures.cashier || 0)).sort((a, b) => Number(b.time || 0) - Number(a.time || 0)),
     waiters: CFG.waiters.map(({ id, name }) => ({ id, name })),
     settings: O.cashierSettings || { printerIp: '192.168.1.51' }
   });
@@ -392,6 +393,13 @@ app.post('/api/cashier/pay', cashier, (q, s) => {
   o.paymentMethod = String(q.body.paymentMethod || 'Naqd').slice(0, 30);
   save('orders');
   s.json({ ok: true, order: o });
+});
+
+// CASHIER CLEAR: hides current orders on the cashier screen only; history stays in Admin.
+app.post('/api/cashier/close-day', cashier, (q, s) => {
+  O.dayClosures.cashier = Date.now();
+  save('orders');
+  s.json({ ok: true, closedAt: O.dayClosures.cashier });
 });
 
 // CASHIER PAGE

@@ -11,7 +11,7 @@
 <section id="settings" class="settings"><h3 style="color:#ffe39a;margin-top:0">Chek printer sozlamalari</h3><label class="muted">Printer IP manzili</label><div class="settingsrow"><input id="printerIp" class="input" value="192.168.1.51" placeholder="192.168.1.51"><button class="btn" onclick="saveSettings()">Saqlash</button></div><p class="muted">Hozirgi printer IP: 192.168.1.51. Chek 72 mm formatda tayyorlanadi. Chop etishda noutbukdagi Windows printer oynasidan shu tarmoq printerini tanlang.</p></section>
 <div class="stats"><div class="stat"><span>To‘lov kutilmoqda</span><b id="pendingCount">0</b></div><div class="stat"><span>Bugun to‘langan</span><b id="paidCount">0</b></div><div class="stat"><span>Bugungi tushum</span><b id="paidSum">0 so‘m</b></div></div>
 <div class="tabs"><button id="pendingTab" class="tab on" onclick="setTab('pending')">To‘lov kutilmoqda</button><button id="paidTab" class="tab" onclick="setTab('paid')">To‘langanlar</button></div>
-<div class="toolbar"><input id="search" class="input" placeholder="Buyurtma, stol yoki ofitsiantni qidirish..." oninput="render()"><button class="btn dark" onclick="refresh()">↻ Yangilash</button></div>
+<div class="toolbar"><input id="search" class="input" placeholder="Buyurtma, stol yoki ofitsiantni qidirish..." oninput="render()"><button class="btn dark" onclick="refresh()">↻ Yangilash</button><button id="clearBtn" class="btn" style="background:#7a1f28;color:#fff;border:1px solid #bd2431" onclick="clearData()">🗑 Ma'lumotlarni tozalash</button></div>
 <div id="orders" class="ordersgrid"></div>
 </section></main>
 <script>
@@ -50,6 +50,9 @@ async function reprint(id){
   try{await localPrint(o);alert('Chek printerga qayta yuborildi.')}
   catch(e){alert('Chek chiqarmadi: '+e.message+'\nORZU printer yordamchi dasturi ishga tushganini tekshiring.')}
 }
+let clearArmed=null;
+async function clearData(){const b=$('clearBtn');if(!clearArmed){b.textContent='Aniq tozalaymi? Yana bir marta bosing';clearArmed=setTimeout(()=>{clearArmed=null;b.textContent="🗑 Ma'lumotlarni tozalash"},5000);return}
+clearTimeout(clearArmed);clearArmed=null;b.disabled=true;try{await api('/api/cashier/close-day','POST',{});await refresh();b.textContent='✓ Tozalandi'}catch(e){b.textContent='✕ '+e.message}setTimeout(()=>{b.disabled=false;b.textContent="🗑 Ma'lumotlarni tozalash"},2500)}
 async function saveSettings(){try{const d=await api('/api/cashier/settings','POST',{printerIp:$('printerIp').value});DATA.settings=d.settings;alert('Printer IP manzili saqlandi: '+d.settings.printerIp)}catch(e){alert(e.message)}}
 function toggleSettings(){$('settings').classList.toggle('show')}
 if(key){refresh().then(()=>{$('login').classList.add('hidden');$('app').classList.remove('hidden')}).catch(()=>{})}
