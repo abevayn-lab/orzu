@@ -1,8 +1,8 @@
 {
   "id": "/admin/",
-  "name": "ORZU Administrator",
-  "short_name": "Administrator",
-  "description": "ORZU restoranining barcha buyurtmalari va boshqaruv paneli",
+  "name": "ORZU Admin",
+  "short_name": "Admin",
+  "description": "ORZU restoranining boshqaruv paneli",
   "start_url": "/admin/",
   "scope": "/",
   "display": "standalone",
