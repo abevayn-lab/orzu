@@ -70,11 +70,6 @@ button,a,input,select,textarea{touch-action:manipulation}
    ask();arm();
  });
  arm();
- document.addEventListener('touchend',function(e){
-   const now=Date.now();
-   if(window.__orzuLastTap&&now-window.__orzuLastTap<320)e.preventDefault();
-   window.__orzuLastTap=now;
- },{passive:false});
- document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+  document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
 })();
 </script></body></html>
