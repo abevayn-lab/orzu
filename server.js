@@ -10,6 +10,7 @@ app.use(express.json({ limit: '12mb' }));
 const PASS = process.env.ADMIN_PASS || 'admin123';
 const ADMINISTRATOR_PASS = process.env.ADMINISTRATOR_PASS || '';
 const CASHIER_PASS = process.env.CASHIER_PASS || PASS;
+const PRINT_KEY = process.env.ORZU_PRINT_KEY || 'ORZU-LOCAL-PRINT-KEY-9f42c7b1-2026-11';
 const SU = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SK = process.env.SUPABASE_KEY;
 
@@ -84,6 +85,7 @@ async function load() {
   if (!Number.isFinite(Number(O.dayClosures.administrator))) O.dayClosures.administrator = 0;
   if (!O.cashierSettings || typeof O.cashierSettings !== 'object') O.cashierSettings = { printerIp: '192.168.1.51' };
   if (typeof O.cashierSettings.printerIp !== 'string') O.cashierSettings.printerIp = '192.168.1.51';
+  if (!Array.isArray(O.printJobs)) O.printJobs = [];
 }
 
 // DATABASE SAVE
@@ -322,6 +324,37 @@ app.post('/api/waiter/add', (q, s, n) => {
   save('orders');
 
   s.json({ ok: true, id: o.id });
+});
+
+
+// WAITER PRINT: queue this waiter's own order for the laptop bridge
+app.post('/api/waiter/print', (q, s, n) => { q.query = q.body; n(); }, wt, (q, s) => {
+  const o = O.list.find(x => String(x.id) === String(q.body.orderId) && x.waiter === q.w.id);
+  if (!o) return s.status(404).json({ error: 'Buyurtma topilmadi' });
+  if (!Array.isArray(o.items) || !o.items.length) return s.status(400).json({ error: 'Buyurtmada taom yo‘q' });
+  const job = {
+    id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
+    printerIp: O.cashierSettings?.printerIp || '192.168.1.51',
+    order: { ...o, waiterName: o.waiterName || q.w.name }
+  };
+  O.printJobs.push(job);
+  save('orders');
+  s.json({ ok: true, message: 'Chek printerga yuborildi' });
+});
+
+// LOCAL BRIDGE: fetch one queued print job
+app.get('/api/printer/jobs', (q, s) => {
+  if (q.headers['x-orzu-print-key'] !== PRINT_KEY) return s.status(401).json({ error: 'auth' });
+  s.json({ job: (O.printJobs || [])[0] || null });
+});
+
+// LOCAL BRIDGE: acknowledge a successfully printed job
+app.post('/api/printer/jobs/ack', (q, s) => {
+  if (q.headers['x-orzu-print-key'] !== PRINT_KEY) return s.status(401).json({ error: 'auth' });
+  const before = (O.printJobs || []).length;
+  O.printJobs = (O.printJobs || []).filter(j => String(j.id) !== String(q.body.id));
+  if (O.printJobs.length !== before) save('orders');
+  s.json({ ok: true });
 });
 
 // CASHIER: all orders and printer settings
