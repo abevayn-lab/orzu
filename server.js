@@ -250,24 +250,8 @@ app.get('/api/waiter/presence', wt, (q, s) => {
   const shift = O.waiterShifts?.[q.w.id] || { online: false, onlineAt: 0, offlineAt: 0, sessions: [] };
   s.json({ online: !!shift.online, onlineAt: Number(shift.onlineAt || 0), offlineAt: Number(shift.offlineAt || 0), sessions: shift.sessions || [] });
 });
-app.post('/api/waiter/presence', (q, s, n) => { q.query = q.body; n(); }, wt, (q, s) => {
-  if (typeof q.body.online !== 'boolean') return s.status(400).json({ error: 'Onlayn yoki oflayn holatini tanlang' });
-  const now = Date.now();
-  const shift = O.waiterShifts[q.w.id] || (O.waiterShifts[q.w.id] = { online: false, onlineAt: 0, offlineAt: 0, sessions: [] });
-  if (q.body.online && !shift.online) {
-    shift.online = true;
-    shift.onlineAt = now;
-    shift.offlineAt = 0;
-    shift.sessions.push({ start: now, end: 0 });
-    if (shift.sessions.length > 100) shift.sessions = shift.sessions.slice(-100);
-  } else if (!q.body.online && shift.online) {
-    shift.online = false;
-    shift.offlineAt = now;
-    const openSession = [...(shift.sessions || [])].reverse().find(x => !x.end);
-    if (openSession) openSession.end = now;
-  }
-  save('orders');
-  s.json({ ok: true, online: !!shift.online, onlineAt: Number(shift.onlineAt || 0), offlineAt: Number(shift.offlineAt || 0), sessions: shift.sessions || [] });
+app.post('/api/waiter/presence', wt, (q, s) => {
+  return s.status(403).json({ error: 'Ofitsiant holatini faqat kassir o‘zgartira oladi.' });
 });
 
 // WAITER ORDERS
