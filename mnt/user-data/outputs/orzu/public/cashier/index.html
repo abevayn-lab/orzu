@@ -26,10 +26,30 @@ function updateStats(){const now=new Date(),today=DATA.orders.filter(o=>o.status
 function setTab(t){tab=t;$('pendingTab').classList.toggle('on',t==='pending');$('paidTab').classList.toggle('on',t==='paid');render()}
 function render(){if(!$('orders'))return;const q=$('search').value.trim().toLowerCase();const list=DATA.orders.filter(o=>(tab==='paid'?o.status==='paid':o.status!=='paid')&&(!q||[o.id,o.table,o.waiterName].join(' ').toLowerCase().includes(q)));$('orders').innerHTML=list.length?list.map(card).join(''):'<div class="empty">Bu bo‘limda buyurtma yo‘q</div>'}
 function card(o){return '<article class="order"><div class="orderhead"><b style="color:#ffe39a">Buyurtma #'+esc(o.id)+' · Stol '+esc(o.table)+'</b><span class="badge '+(o.status==='paid'?'paid':'')+'">'+(o.status==='paid'?'To‘langan':'To‘lov kutilmoqda')+'</span></div><div class="muted" style="margin-top:6px">Ofitsiant: '+esc(o.waiterName||'—')+' · '+new Date(o.time).toLocaleString('uz-UZ')+'</div><div class="items">'+(o.items||[]).map(i=>'<div class="item"><span>'+esc(i.name)+' × '+Number(i.qty)+'</span><b>'+money(Number(i.price)*Number(i.qty))+'</b></div>').join('')+'</div><div class="total"><span>JAMI</span><span>'+money(o.total)+'</span></div><div class="actions">'+(o.status==='paid'?'<button class="btn" onclick="reprint('+Number(o.id)+')">🖨 Chek chiqarish</button>':'<button class="btn" onclick="markPaid('+Number(o.id)+')">✓ To‘landi · Chek chiqarish</button><button class="btn dark" onclick="reprint('+Number(o.id)+')">Chek (oldindan)</button>')+'</div>'+(o.status==='paid'?'<div class="muted" style="margin-top:9px">To‘lov: '+new Date(o.paidAt||o.time).toLocaleString('uz-UZ')+' · '+esc(o.paymentMethod||'Naqd')+'</div>':'')+'</article>'}
-function receiptPopup(){const w=window.open('','_blank','width=420,height=700');if(!w)alert('Chek oynasi bloklandi. Brauzerda pop-upga ruxsat bering.');return w}
-function printReceipt(o,w){if(!w)return;const rows=(o.items||[]).map(i=>'<tr><td>'+esc(i.name)+'<br><small>'+Number(i.qty)+' × '+money(i.price)+'</small></td><td style="text-align:right;white-space:nowrap">'+money(Number(i.qty)*Number(i.price))+'</td></tr>').join('');w.document.open();w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>ORZU chek</title><style>@page{size:80mm auto;margin:4mm}*{box-sizing:border-box}body{width:72mm;margin:0 auto;color:#000;font:12px Arial,sans-serif}h2{text-align:center;font-size:22px;margin:4px 0}p{text-align:center;margin:3px 0}.line{border-top:1px dashed #000;margin:8px 0}table{width:100%;border-collapse:collapse}td{padding:5px 0;vertical-align:top}.sum{font-size:17px;font-weight:bold;text-align:right;margin-top:8px}.small{font-size:10px;text-align:center}</style></head><body><h2>ORZU</h2><p>RESTORANI</p><div class="line"></div><p>Buyurtma #'+esc(o.id)+'</p><p>Stol: '+esc(o.table)+'</p><p>Ofitsiant: '+esc(o.waiterName||'—')+'</p><p>'+new Date(o.paidAt||o.time).toLocaleString('uz-UZ')+'</p><div class="line"></div><table>'+rows+'</table><div class="line"></div><div class="sum">JAMI: '+money(o.total)+'</div><div class="line"></div><p>To‘lov: '+esc(o.paymentMethod||'Naqd')+'</p><p class="small">Xaridingiz uchun rahmat!</p><script>window.onload=()=>{setTimeout(()=>window.print(),250)};<\/script></body></html>');w.document.close()}
-async function markPaid(id){if(busy)return;const o=DATA.orders.find(x=>Number(x.id)===id);if(!o)return;const w=receiptPopup();if(!confirm('Stol '+o.table+' · '+money(o.total)+' to‘lovini qabul qildingizmi?')){if(w)w.close();return}busy=true;try{const d=await api('/api/cashier/pay','POST',{orderId:id,cashierName:$('cashierName').value||'Kassir',paymentMethod:'Naqd'});DATA.orders=DATA.orders.map(x=>Number(x.id)===id?d.order:x);updateStats();render();printReceipt(d.order,w)}catch(e){if(w)w.close();alert(e.message)}finally{busy=false}}
-function reprint(id){const o=DATA.orders.find(x=>Number(x.id)===id);if(!o)return;const w=receiptPopup();printReceipt(o,w)}
+async function localPrint(o){
+  const printerIp=$('printerIp').value.trim()||DATA.settings?.printerIp||'192.168.1.51';
+  const response=await fetch('http://127.0.0.1:17891/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({printerIp,order:o})});
+  let result={};try{result=await response.json()}catch(e){}
+  if(!response.ok)throw new Error(result.error||'Printerdan javob kelmadi');
+  return result;
+}
+async function markPaid(id){
+  if(busy)return;
+  const o=DATA.orders.find(x=>Number(x.id)===id);if(!o)return;
+  if(!confirm('Stol '+o.table+' · '+money(o.total)+' to‘lovini qabul qildingizmi?'))return;
+  busy=true;
+  try{
+    const d=await api('/api/cashier/pay','POST',{orderId:id,cashierName:$('cashierName').value||'Kassir',paymentMethod:'Naqd'});
+    DATA.orders=DATA.orders.map(x=>Number(x.id)===id?d.order:x);updateStats();render();
+    try{await localPrint(d.order);alert('To‘lov saqlandi. Chek printerga yuborildi.');}
+    catch(e){alert('To‘lov saqlandi, ammo chek printerga yuborilmadi: '+e.message+'\nORZU printer yordamchi dasturi noutbukda ishga tushirilganini tekshiring.');}
+  }catch(e){alert(e.message)}finally{busy=false}
+}
+async function reprint(id){
+  const o=DATA.orders.find(x=>Number(x.id)===id);if(!o)return;
+  try{await localPrint(o);alert('Chek printerga qayta yuborildi.')}
+  catch(e){alert('Chek chiqarmadi: '+e.message+'\nORZU printer yordamchi dasturi ishga tushganini tekshiring.')}
+}
 async function saveSettings(){try{const d=await api('/api/cashier/settings','POST',{printerIp:$('printerIp').value});DATA.settings=d.settings;alert('Printer IP manzili saqlandi: '+d.settings.printerIp)}catch(e){alert(e.message)}}
 function toggleSettings(){$('settings').classList.toggle('show')}
 if(key){refresh().then(()=>{$('login').classList.add('hidden');$('app').classList.remove('hidden')}).catch(()=>{})}
