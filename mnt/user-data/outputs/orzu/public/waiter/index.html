@@ -5,7 +5,7 @@
 </style></head><body>
 <header class="hero"><div class="crown">♛</div><h1>ORZU</h1><p>R E S T O R A N I</p></header><main class="wrap" id="app"></main>
 <script>
-let W=JSON.parse(localStorage.w||'null'),O=[],knownNewIds=new Set(),firstOrdersLoad=true,soundContext=null,MENU=[],SEL={},TGT=0;
+let W=JSON.parse(localStorage.w||'null'),O=[],knownNewIds=new Set(),firstOrdersLoad=true,soundContext=null,MENU=[],MCATS=[],SEL={},TGT=0;
 const f=n=>Number(n||0).toLocaleString('uz-UZ')+" so'm",esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ST={new:'Yangi buyurtma',accepted:'Qabul qilindi',served:'Tayyorlanmoqda',paid:'Yakunlandi'},NX={new:['accepted','Qabul qilish'],accepted:['served','Taom berildi']};
 function unlockSound(){try{soundContext=soundContext||new AudioContext();soundContext.resume()}catch(e){}}
@@ -36,26 +36,38 @@ async function printOrder(orderId){
 
 async function st(orderId,status){await fetch('/api/waiter/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...W,orderId,status})});load()}
 async function openAdd(id){
-  const previous=document.getElementById('pk');if(previous)previous.remove();
-  TGT=Number(id)||0;SEL={};
-  const d=document.createElement('div');d.id='pk';d.className='modal';
-  d.innerHTML='<div class="modalbox"><h2 id="orzu-modal-title" style="color:#ffe39a">'+(TGT?'Buyurtmaga taom qo‘shish':'Yangi buyurtma')+'</h2>'+(TGT?'':'<input class="input" id="orzu-table-input" placeholder="Stol raqami">')+'<div id="pl"><p class="muted">Menyu yuklanmoqda...</p></div><div class="actions" style="margin-top:15px"><button type="button" class="dark" onclick="closeAdd()">Bekor</button><button type="button" onclick="sendAdd()">Saqlash</button></div></div>';
-  document.body.appendChild(d);
+  const old=document.getElementById('pk');if(old)old.remove();
+  TGT=Number(id)||0;SEL={};MENU=[];MCATS=[];
+  const modal=document.createElement('div');modal.id='pk';modal.className='modal';
+  modal.innerHTML='<div class="modalbox"><h2 id="orzu-modal-title" style="color:#ffe39a">'+(TGT?'Buyurtmaga taom qo‘shish':'Yangi buyurtma')+'</h2>'+(TGT?'':'<label for="orzu-table-input" style="display:block;color:#ffe39a;margin:12px 0 4px">Stol raqami</label><input class="input" id="orzu-table-input" type="number" inputmode="numeric" min="1" placeholder="Masalan: 8" required>')+'<div id="pl"><p class="muted">Menyu yuklanmoqda...</p></div><div class="actions" style="margin-top:15px"><button type="button" class="dark" onclick="closeAdd()">Bekor</button><button type="button" onclick="sendAdd()">Buyurtmani saqlash</button></div></div>';
+  document.body.appendChild(modal);
   try{
     unlockSound();
-    const response=await fetch('/api/menu?ts='+Date.now(),{cache:'no-store',headers:{'Accept':'application/json'}});
-    if(!response.ok)throw new Error('Menyu serverdan olinmadi ('+response.status+').');
-    const data=await response.json();MENU=Array.isArray(data.menu)?data.menu.filter(m=>m&&!m.hidden):[];
-    if(!MENU.length)throw new Error('Menyu bo‘sh. Admin panelida taomlar qo‘shilganini tekshiring.');
-    const o=O.find(x=>String(x.id)===String(TGT));if(TGT&&!o)throw new Error('Buyurtma topilmadi. Sahifani yangilang.');
-    const title=document.getElementById('orzu-modal-title');if(title)title.textContent=TGT?'Stol '+o.table+': taom qo‘shish':'Yangi buyurtma';
+    const response=await fetch('/api/menu?ts='+Date.now(),{method:'GET',cache:'no-store',headers:{'Accept':'application/json'}});
+    if(!response.ok)throw new Error('Menyu serverdan olinmadi. Xato kodi: '+response.status);
+    const data=await response.json();
+    MCATS=Array.isArray(data.cats)?data.cats:[];
+    MENU=Array.isArray(data.menu)?data.menu.filter(m=>m&&!m.hidden&&m.id!=null):[];
+    if(!MENU.length)throw new Error('Bazadagi menyu bo‘sh. Admin panelidagi menyu bazasini tekshirish kerak.');
+    const order=O.find(x=>String(x.id)===String(TGT));
+    if(TGT&&!order)throw new Error('Buyurtma topilmadi. Sahifani yangilang.');
+    const title=document.getElementById('orzu-modal-title');
+    if(title)title.textContent=TGT?'Stol '+order.table+': taom qo‘shish':'Yangi buyurtma — menyudan tanlang';
     pdraw();
-  }catch(e){MENU=[];const panel=document.getElementById('pl');if(panel)panel.innerHTML='<p style="color:#ffb7a8;padding:12px">'+esc(e.message||'Menyu ochilmadi')+'</p>';console.error('ORZU waiter menu:',e);}
+    const table=document.getElementById('orzu-table-input');if(table)table.focus();
+  }catch(error){
+    const panel=document.getElementById('pl');
+    if(panel)panel.innerHTML='<p style="color:#ffb7a8;padding:12px">'+esc(error.message||'Menyu ochilmadi')+'</p>';
+    console.error('ORZU menu load failed:',error);
+  }
 }
 function closeAdd(){const modal=document.getElementById('pk');if(modal)modal.remove()}
 function pdraw(){
   const panel=document.getElementById('pl');if(!panel)return;
-  panel.innerHTML=MENU.length?MENU.map(m=>'<div class="menuitem">'+(m.img?'<img class="foodpic" src="'+esc(m.img)+'">':'<span class="foodfallback">🍽️</span>')+'<span>'+esc(m.name)+'<br><small class="muted">'+f(m.price)+'</small></span><span class="qty"><button onclick="pq('+Number(m.id)+',-1)">−</button> <b>'+Number(SEL[m.id]||0)+'</b> <button onclick="pq('+Number(m.id)+',1)">+</button></span></div>').join(''):'<p>Menyu bo‘sh</p>';
+  if(!MENU.length){panel.innerHTML='<p class="muted">Menyuda hozircha taom yo‘q</p>';return}
+  const groups=[];
+  MENU.forEach(item=>{const key=Number(item.cat)||0;let group=groups.find(x=>x.cat===key);if(!group){group={cat:key,items:[]};groups.push(group)}group.items.push(item)});
+  panel.innerHTML=groups.map(group=>'<h3 style="color:#ffe39a;margin:16px 0 6px">'+esc(MCATS[group.cat]||'Taomlar')+'</h3>'+group.items.map(m=>'<div class="menuitem">'+(m.img?'<img class="foodpic" src="'+esc(m.img)+'">':'<span class="foodfallback">🍽️</span>')+'<span style="flex:1">'+esc(m.name)+'<br><small class="muted">'+f(m.price)+'</small></span><span class="qty"><button type="button" onclick="pq('+Number(m.id)+',-1)">−</button> <b>'+Number(SEL[m.id]||0)+'</b> <button type="button" onclick="pq('+Number(m.id)+',1)">+</button></span></div>').join('')).join('');
 }
 function pq(id,d){SEL[id]=Math.max(0,Math.min(99,(SEL[id]||0)+d));pdraw()}
 async function sendAdd(){
