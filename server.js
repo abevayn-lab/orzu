@@ -335,7 +335,7 @@ app.get('/api/cashier/data', cashier, (q, s) => {
 
 app.post('/api/cashier/settings', cashier, (q, s) => {
   const ip = String(q.body.printerIp || '').trim();
-  if (!/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(ip) || ip.split('.').some(x => Number(x) > 255)) {
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) || ip.split('.').some(x => Number(x) > 255)) {
     return s.status(400).json({ error: 'Printer IP manzilini to‘g‘ri kiriting' });
   }
   O.cashierSettings = { ...(O.cashierSettings || {}), printerIp: ip };
