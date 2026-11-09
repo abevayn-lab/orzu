@@ -35,10 +35,40 @@ async function printOrder(orderId){
 }
 
 async function st(orderId,status){await fetch('/api/waiter/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...W,orderId,status})});load()}
-async function openAdd(id){unlockSound();TGT=id;SEL={};if(!MENU.length)MENU=(await(await fetch('/api/menu')).json()).menu;const o=O.find(o=>o.id==id);const d=document.createElement('div');d.id='pk';d.className='modal';d.innerHTML='<div class="modalbox"><h2 style="color:#ffe39a">'+(id?'Stol '+esc(o.table)+': qo‘shish':'Yangi buyurtma')+'</h2>'+(id?'':'<input class="input" id="tb" placeholder="Stol raqami">')+'<div id="pl"></div><div class="actions" style="margin-top:15px"><button class="dark" onclick="pk.remove()">Bekor</button><button onclick="sendAdd()">Saqlash</button></div></div>';document.body.appendChild(d);pdraw()}
-function pdraw(){pl.innerHTML=MENU.length?MENU.map(m=>'<div class="menuitem">'+(m.img?'<img class="foodpic" src="'+esc(m.img)+'" onerror="this.style.display=\'none\'">':'<span class="foodfallback">🍽️</span>')+'<span>'+esc(m.name)+'<br><small class="muted">'+f(m.price)+'</small></span><span class="qty"><button onclick="pq('+Number(m.id)+',-1)">−</button> <b>'+Number(SEL[m.id]||0)+'</b> <button onclick="pq('+Number(m.id)+',1)">+</button></span></div>').join(''):'<p>Menyu bo‘sh</p>'}
+async function openAdd(id){
+  try{
+    unlockSound();TGT=Number(id)||0;SEL={};
+    const response=await fetch('/api/menu',{cache:'no-store'});
+    if(!response.ok)throw new Error('Menyu serverdan olinmadi ('+response.status+')');
+    const data=await response.json();
+    MENU=Array.isArray(data.menu)?data.menu:[];
+    if(!MENU.length)throw new Error('Menyu hozircha bo‘sh. Admin paneldagi menyuni tekshiring.');
+    const o=O.find(x=>String(x.id)===String(TGT));
+    if(TGT&&!o)throw new Error('Buyurtma topilmadi. Sahifani yangilang.');
+    const d=document.createElement('div');d.id='pk';d.className='modal';
+    d.innerHTML='<div class="modalbox"><h2 style="color:#ffe39a">'+(TGT?'Stol '+esc(o.table)+': qo‘shish':'Yangi buyurtma')+'</h2>'+(TGT?'':'<input class="input" id="orzu-table-input" placeholder="Stol raqami">')+'<div id="pl"></div><div class="actions" style="margin-top:15px"><button class="dark" onclick="closeAdd()">Bekor</button><button onclick="sendAdd()">Saqlash</button></div></div>';
+    document.body.appendChild(d);pdraw();
+  }catch(e){alert(e.message||'Menyu ochilmadi. Internetni tekshiring.')}
+}
+function closeAdd(){const modal=document.getElementById('pk');if(modal)modal.remove()}
+function pdraw(){
+  const panel=document.getElementById('pl');if(!panel)return;
+  panel.innerHTML=MENU.length?MENU.map(m=>'<div class="menuitem">'+(m.img?'<img class="foodpic" src="'+esc(m.img)+'" onerror="this.style.display=\\'none\\'">':'<span class="foodfallback">🍽️</span>')+'<span>'+esc(m.name)+'<br><small class="muted">'+f(m.price)+'</small></span><span class="qty"><button onclick="pq('+Number(m.id)+',-1)">−</button> <b>'+Number(SEL[m.id]||0)+'</b> <button onclick="pq('+Number(m.id)+',1)">+</button></span></div>').join(''):'<p>Menyu bo‘sh</p>';
+}
 function pq(id,d){SEL[id]=Math.max(0,Math.min(99,(SEL[id]||0)+d));pdraw()}
-async function sendAdd(){const items=Object.entries(SEL).filter(e=>e[1]>0).map(e=>({id:+e[0],qty:e[1]}));if(!items.length)return alert('Taom tanlang');const b={...W,items};if(TGT)b.orderId=TGT;else{b.table=tb.value;if(!b.table.trim())return alert('Stol raqamini kiriting')}const r=await fetch('/api/waiter/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok)return alert((await r.json()).error||'Xato');pk.remove();load()}
+async function sendAdd(){
+  try{
+    const items=Object.entries(SEL).filter(e=>e[1]>0).map(e=>({id:+e[0],qty:e[1]}));
+    if(!items.length)return alert('Taom tanlang');
+    const b={...W,items};
+    if(TGT)b.orderId=TGT;
+    else{const table=document.getElementById('orzu-table-input')?.value||'';b.table=table.trim();if(!b.table)return alert('Stol raqamini kiriting')}
+    const r=await fetch('/api/waiter/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.error||'Buyurtma saqlanmadi');
+    closeAdd();load();
+  }catch(e){alert(e.message||'Xato yuz berdi')}
+}
 if(W)load();else login();setInterval(()=>W&&load(),4000);
 </script><style>
 html{touch-action:manipulation;-webkit-text-size-adjust:100%;overscroll-behavior:none}
