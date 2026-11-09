@@ -9,6 +9,7 @@ app.use(express.json({ limit: '12mb' }));
 
 const PASS = process.env.ADMIN_PASS || 'admin123';
 const ADMINISTRATOR_PASS = process.env.ADMINISTRATOR_PASS || '';
+const CASHIER_PASS = process.env.CASHIER_PASS || PASS;
 const SU = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SK = process.env.SUPABASE_KEY;
 
@@ -42,7 +43,8 @@ let O = {
   list: [],
   seq: 10,
   nextWaiterIndex: 0,
-  dayClosures: { waiters: {}, administrator: 0 }
+  dayClosures: { waiters: {}, administrator: 0 },
+  cashierSettings: { printerIp: '192.168.1.51' }
 };
 
 // DATABASE LOAD
@@ -80,6 +82,8 @@ async function load() {
   if (!O.dayClosures || typeof O.dayClosures !== 'object') O.dayClosures = { waiters: {}, administrator: 0 };
   if (!O.dayClosures.waiters || typeof O.dayClosures.waiters !== 'object') O.dayClosures.waiters = {};
   if (!Number.isFinite(Number(O.dayClosures.administrator))) O.dayClosures.administrator = 0;
+  if (!O.cashierSettings || typeof O.cashierSettings !== 'object') O.cashierSettings = { printerIp: '192.168.1.51' };
+  if (typeof O.cashierSettings.printerIp !== 'string') O.cashierSettings.printerIp = '192.168.1.51';
 }
 
 // DATABASE SAVE
@@ -120,6 +124,12 @@ function adm(q, s, n) {
 function administrator(q, s, n) {
   if (ADMINISTRATOR_PASS && q.headers['x-administrator'] === ADMINISTRATOR_PASS) return n();
   return s.status(401).json({ error: ADMINISTRATOR_PASS ? 'auth' : 'Administrator paroli Railway Variables’da sozlanmagan' });
+}
+
+// CASHIER AUTH
+function cashier(q, s, n) {
+  if (q.headers['x-cashier'] === CASHIER_PASS) return n();
+  return s.status(401).json({ error: 'auth' });
 }
 
 // WAITER AUTH
@@ -312,6 +322,42 @@ app.post('/api/waiter/add', (q, s, n) => {
   save('orders');
 
   s.json({ ok: true, id: o.id });
+});
+
+// CASHIER: all orders and printer settings
+app.get('/api/cashier/data', cashier, (q, s) => {
+  s.json({
+    orders: O.list.slice().sort((a, b) => Number(b.time || 0) - Number(a.time || 0)),
+    waiters: CFG.waiters.map(({ id, name }) => ({ id, name })),
+    settings: O.cashierSettings || { printerIp: '192.168.1.51' }
+  });
+});
+
+app.post('/api/cashier/settings', cashier, (q, s) => {
+  const ip = String(q.body.printerIp || '').trim();
+  if (!/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(ip) || ip.split('.').some(x => Number(x) > 255)) {
+    return s.status(400).json({ error: 'Printer IP manzilini to‘g‘ri kiriting' });
+  }
+  O.cashierSettings = { ...(O.cashierSettings || {}), printerIp: ip };
+  save('orders');
+  s.json({ ok: true, settings: O.cashierSettings });
+});
+
+app.post('/api/cashier/pay', cashier, (q, s) => {
+  const o = O.list.find(x => String(x.id) === String(q.body.orderId));
+  if (!o) return s.status(404).json({ error: 'Buyurtma topilmadi' });
+  if (o.status === 'paid') return s.status(409).json({ error: 'Bu buyurtma avval to‘langan', order: o });
+  o.status = 'paid';
+  o.paidAt = Date.now();
+  o.paidBy = String(q.body.cashierName || 'Kassir').slice(0, 60);
+  o.paymentMethod = String(q.body.paymentMethod || 'Naqd').slice(0, 30);
+  save('orders');
+  s.json({ ok: true, order: o });
+});
+
+// CASHIER PAGE
+app.get(['/cashier', '/cashier/'], (q, s) => {
+  s.sendFile(path.join(PUB, 'cashier', 'index.html'));
 });
 
 // ADMIN DATA
