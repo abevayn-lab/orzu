@@ -179,10 +179,13 @@ app.post('/api/order', (q, s) => {
 
   // Har bir yangi mijoz zakazi ofitsiantlarga qat'iy navbat bilan taqsimlanadi.
   // Stol bandligi yoki oldingi zakazlar navbatni o'zgartirmaydi.
-  const waiterIndex = O.nextWaiterIndex % CFG.waiters.length;
-  const w = CFG.waiters[waiterIndex];
+  // Faqat hozir faol ro‘yxatda turgan ofitsiantlarga yangi zakaz beriladi.
+  const activeWaiters = CFG.waiters.filter(w => w && w.id != null && String(w.name || '').trim());
+  if (!activeWaiters.length) return s.status(400).json({ error: "Faol ofitsiant yo'q" });
+  const waiterIndex = O.nextWaiterIndex % activeWaiters.length;
+  const w = activeWaiters[waiterIndex];
   const wid = w.id;
-  O.nextWaiterIndex = (waiterIndex + 1) % CFG.waiters.length;
+  O.nextWaiterIndex = (waiterIndex + 1) % activeWaiters.length;
 
   const o = {
     id: ++O.seq,
