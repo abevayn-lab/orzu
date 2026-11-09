@@ -442,10 +442,13 @@ app.get('/', (q, s) => {
   s.sendFile(path.join(P, 'index.html'));
 });
 
-// SEPARATE ADMINISTRATOR PAGE
-app.get(['/administrator', '/administrator/'], (q, s) => {
-  s.sendFile(path.join(PUB, 'administrator', 'index.html'));
-});
+// SEPARATE ADMINISTRATOR PAGE — serve index.html directly from its own folder
+const ADMINISTRATOR_PUBLIC = path.join(PUB, 'administrator');
+app.use('/administrator', express.static(ADMINISTRATOR_PUBLIC, {
+  index: 'index.html',
+  fallthrough: true,
+  extensions: ['html']
+}));
 
 // ADMIN PAGE
 app.get(['/admin', '/admin/'], (q, s) => {
@@ -470,6 +473,7 @@ load()
         'Orzu ishga tushdi, baza:',
         SU ? 'Supabase' : 'fayl'
       );
+      console.log('Administrator sahifasi:', fs.existsSync(path.join(ADMINISTRATOR_PUBLIC, 'index.html')) ? 'TOPILDI' : 'TOPILMADI', path.join(ADMINISTRATOR_PUBLIC, 'index.html'));
     });
   })
   .catch(e => {
