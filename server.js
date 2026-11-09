@@ -123,7 +123,8 @@ function save(k) {
     data: k === 'cfg' ? CFG : O
   });
 
-  q0 = q0.then(async () => {
+  // Oldingi saqlash xatosi navbatdagi saqlashlarni bloklab qo'ymasligi kerak.
+  const operation = q0.catch(() => {}).then(async () => {
     const r = await fetch(`${SU}/rest/v1/store`, {
       method: 'POST',
       headers: {
@@ -135,7 +136,8 @@ function save(k) {
 
     if (!r.ok) throw new Error('Saqlash xato: ' + await r.text());
   });
-  return q0;
+  q0 = operation;
+  return operation;
 }
 
 // ADMIN AUTH
